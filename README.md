@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/teerthsharma/planimeter/blob/main/RESULTS.md"><img src="https://img.shields.io/badge/tests-469%20passed-2ea043?style=flat-square" alt="469 tests passed"></a>
+  <a href="https://github.com/teerthsharma/planimeter/blob/main/RESULTS.md"><img src="https://img.shields.io/badge/tests-474%20passed-2ea043?style=flat-square" alt="474 tests passed"></a>
   <a href="https://github.com/teerthsharma/planimeter/blob/main/RESULTS.md#1-g2--wrong-integers-on-the-jitter-stratum"><img src="https://img.shields.io/badge/wrong%20integers-0%20of%20528-0b7285?style=flat-square" alt="0 wrong integers in 528 draws"></a>
   <a href="https://github.com/teerthsharma/planimeter/blob/main/pyproject.toml"><img src="https://img.shields.io/badge/runtime%20deps-numpy%20%C2%B7%20svgelements-013243?style=flat-square" alt="numpy and svgelements only"></a>
   <img src="https://img.shields.io/badge/counting%20path-no%20GEOS%2C%20no%20raster-8b5cf6?style=flat-square" alt="no GEOS, no raster">
@@ -98,8 +98,8 @@ planimeter wall.svg   vertex near edge
 ```
 
 **7 `cl100k_base` tokens of body**, 5 more for the path. A write to `notes.py` produces
-**zero bytes** — the suffix check runs before any import, costing **1.4 ms over an
-interpreter that does nothing**, and saving **110.6 ms** on every non-geometry write
+**zero bytes** — the suffix check runs before any import, costing **9.0 ms over an
+interpreter that does nothing**, and saving **84.2 ms** on every non-geometry write
 ([RESULTS.md §6](https://github.com/teerthsharma/planimeter/blob/main/RESULTS.md#6-g7--hook-wall-clock-with-a-floor-control)).
 
 Four contract clauses, each with a test: **silence is the default** · **bounded work or a
@@ -119,7 +119,7 @@ State the number **before** the edit; an integer checks the claim after it. No v
 and no area check can even express a claim of this shape.
 
 ```bash
-planimeter check plan.svg --faces 5
+planimeter check plan_loop.svg --faces 5      # after the edit landed
 ```
 
 <!-- generated: check-held -->
@@ -127,7 +127,11 @@ planimeter check plan.svg --faces 5
   CLAIM   faces    stated 5       measured 5       HELD
 ```
 
-and on the file before the edit landed:
+and the same claim against the file before it, which is the four-face `plan.svg` above:
+
+```bash
+planimeter check plan.svg --faces 5
+```
 
 <!-- generated: check-broken -->
 ```
@@ -220,8 +224,9 @@ here and not in a footnote. Not that the radius is *correct* — only that it is
 
 ## 📊 Benchmarks
 
-Pasted from `bench.py`'s own stdout at commit `892f1f2`, one machine. No number in this
-repository is hand-typed. **[Every table, every control, and every arm that lost →
+Pasted from `bench.py`'s own stdout at commit `1e4f006` — the last commit that changed
+code — on one machine. No number in this repository is hand-typed. **[Every table, every
+control, and every arm that lost →
 RESULTS.md](https://github.com/teerthsharma/planimeter/blob/main/RESULTS.md)**
 
 <p align="center">
@@ -265,23 +270,25 @@ What that table is actually saying:
 added *after* the threshold was committed:
 
 ```
-    FLOOR bare interpreter, no hook at all        53.4 ms median  [48.2, 65.5]
-    silent path (.py write)                       54.8 ms median  [51.9, 68.6]  holds
-    CONTROL same hook, suffix check removed      165.4 ms median  [157.7, 176.9]
-    geometry path (.svg write)                   175.4 ms median  [168.3, 186.2]  holds
+    FLOOR bare interpreter, no hook at all        46.7 ms median  [42.6, 55.1]
+    silent path (.py write)                       55.7 ms median  [49.4, 67.9]  holds
+    CONTROL same hook, suffix check removed      139.9 ms median  [121.9, 153.0]
+    geometry path (.svg write)                   148.6 ms median  [130.9, 157.6]  holds
 ```
 
-`python -c pass` costs 53.4 ms on this machine, so the silent path is **1.4 ms of
-planimeter** and 53.4 ms of Windows. Across three runs the silent path measured 52.5, 63.3
-and 54.8 ms; **the middle one blew the 60 ms gate and was printed as `KILLS`.** The
-threshold has not been moved.
+`python -c pass` costs 46.7 ms on this machine, so the silent path is **9.0 ms of
+planimeter** and 46.7 ms of Windows. **The 60 ms gate sits 13 ms above that floor, inside
+the machine's own spread**: across five runs the silent path measured 52.5, 63.3, 54.8,
+60.5 and 55.7 ms, and two of the five blew the gate and were printed as `KILLS`. The
+threshold has not been moved and every run is reported, because a gate that is re-rolled
+until it passes is not a gate.
 
 ### Reproduce all of it
 
 ```bash
 python -m venv .venv && . .venv/*/activate    # .venv\Scripts\activate on Windows
 pip install -e ".[test]"
-pytest -q                                     # 469 passed
+pytest -q                                     # 474 passed
 python bench.py                               # every table above, ~60 s
 python -m planimeter --demo
 ```
@@ -326,14 +333,14 @@ what to re-observe, and a bench with controls.
 ## 💥 What we got wrong
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/teerthsharma/planimeter/main/assets/cost.svg" width="100%" alt="cost curve: fitted log-log exponent 1.87 against a gate that kills above 1.3">
+  <img src="https://raw.githubusercontent.com/teerthsharma/planimeter/main/assets/cost.svg" width="100%" alt="cost curve: fitted log-log exponent 1.82 against a gate that kills above 1.3">
 </p>
 
 - 🪦 **"Usable as a hook on a real floor plan" is withdrawn, not softened.** The gate was
   committed before any number existed: exponent above `1.3`, or above `50 ms` at 100,000
-  vertices, and the sentence dies. Measured exponent **`1.87`**, extrapolating to
-  **`861,535 ms`**. Both blown by orders of magnitude. The comfortable range is under roughly
-  **600 segments** — 42 ms at 544, 1.9 s at 3,784 — and above `BRUTE_MAX` it refuses
+  vertices, and the sentence dies. Measured exponent **`1.82`**, extrapolating to
+  **`698,776 ms`**. Both blown by orders of magnitude. The comfortable range is under roughly
+  **600 segments** — 41 ms at 544, 1.8 s at 3,784 — and above `BRUTE_MAX` it refuses
   `TOO_MANY_VERTICES` rather than stalling a turn. A k-d tree does not fix this: the
   certificate's precondition quantifies over *every* (vertex, edge) pair, and a
   nearest-neighbour structure answers a different question.
@@ -408,7 +415,7 @@ Collected once, here.
 
 - 🎯 **Sample the real baseline (G1).** Twenty unprompted first-attempt agent scripts against the closed-form corpus, whole distribution published, classified by which library each reached for. This is the gate that decides whether the accuracy headline lives.
 - 📂 **The found corpus (G5, G6).** ~30 real agent-written SVGs with truth established by a second method *before* planimeter runs on them. Refusal histogram by reason code ships first, before any usefulness claim.
-- ⚡ **A sweep line for the incidence pass.** The `1.87` exponent is the all-pairs (vertex, edge) quantifier. Fixing it is what puts real floor plans back in scope.
+- ⚡ **A sweep line for the incidence pass.** The `1.82` exponent is the all-pairs (vertex, edge) quantifier. Fixing it is what puts real floor plans back in scope.
 - 🗺️ **More readers** — GeoJSON, WKT, DXF — shipped when the found corpus contains that format, and not before.
 - 🔌 **MCP.** `gis-mcp` owns that surface with 92+ tools; the hook is the difference. Ask if you want one.
 

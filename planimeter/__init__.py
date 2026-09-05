@@ -52,9 +52,16 @@ def chi(source, *, grid=None, rho=None, flatten=16):
     value, not an exception. `chi()` is literally `chi_segments(segments(...))`.
     """
     from .arrange import chi_segments
-    from .read import segments as _segments
+    from .read import segments as _segments, stable
     seg = _segments(source, flatten=flatten)
-    return chi_segments(seg, grid=grid, rho=rho, flatten=flatten)
+    verdict = chi_segments(seg, grid=grid, rho=rho, flatten=flatten)
+    if not seg.has_curves:
+        return verdict
+    # A curve has no vertex set, so flattening invents one. The whole pipeline
+    # runs again at 2N and the two answers have to agree; see read.stable().
+    fine = chi_segments(_segments(source, flatten=2 * flatten),
+                        grid=grid, rho=rho, flatten=flatten)
+    return stable(verdict, fine, seg)
 
 
 def check(source, *, faces=None, pieces=None, chi=None, **kw):

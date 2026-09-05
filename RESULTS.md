@@ -13,7 +13,7 @@ none of them a runtime dependency.
 ```
 python -m venv .venv
 .venv/Scripts/pip install -e ".[test]"
-.venv/Scripts/python -m pytest -q         # 464 passed
+.venv/Scripts/python -m pytest -q         # 469 passed
 .venv/Scripts/python bench.py             # the tables below, 60.4 s
 ```
 

@@ -7,8 +7,8 @@
   not from a render. Every count ships with the <b>snap radius that decided it</b>. When no
   defensible radius exists, <code>planimeter</code> doesn't pick one and hope. It
   <b>refuses</b>, and names the coordinate to go and look at.<br>
-  A <code>PostToolUse</code> hook stamps one nine-token line on every geometric write, so the
-  agent knows what is in the file it just wrote without opening it.
+  A <code>PostToolUse</code> hook stamps one twelve-token line on every geometric write, so
+  the agent knows what is in the file it just wrote without opening it.
 </p>
 
 <p align="center">
@@ -94,7 +94,7 @@ every geometric write and never has to look at the picture:
 ```
 planimeter walls.svg  pieces 1  faces 4
 planimeter walls.svg  pieces 1  faces 4 -> 5
-planimeter wall.svg   vertex near edge
+planimeter walls.svg  vertex near edge
 ```
 
 **7 `cl100k_base` tokens of body**, 5 more for the path. A write to `notes.py` produces
@@ -197,14 +197,15 @@ integers.
 ==============================================================================
   reason   VERTEX_NEAR_EDGE   (geometry)
   detail   1 vertex sits inside the ambiguous band (0, 5)
-  look at  (5, 10)  element=line#s4  edge=line#s2  d=2.2e-06
+  look at  (5, 2.2e-06)  element=line#s4  edge=line#s0  d=2.2e-06
   action   move this end onto the wall, or away from it by more than 5
 ==============================================================================
 ```
 
-That is a crosswall missing its floor by `2.2e-6`. Snap at `1e-5` and it is one room; snap
-at `1e-7` and it is a dangling wall. **Nothing in the file says which.** Every competitor
-returns one of the two integers. planimeter returns the coordinate.
+That is a crosswall missing its floor by `2.2e-6`. Close the gap and the wall divides the
+room, `faces 2`; leave it and the wall is a dangle, `faces 1`. **Nothing in the file says
+which.** Every competitor returns one of the two integers. planimeter returns the
+coordinate.
 
 Ten refusal codes, each actionable by a stranger, each in the file's own coordinates with
 the owning element id: `NO_STABLE_SCALE` · `VERTEX_NEAR_EDGE` · `EDGES_CROSS` ·

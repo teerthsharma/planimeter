@@ -191,7 +191,7 @@ def test_every_refusal_code_has_a_token_or_is_deliberately_silent():
     assert REASON.BAD_INPUT not in hook.TOKEN        # the tool never ran; that is not news
     for token in hook.TOKEN.values():
         assert token == token.lower() and len(token.split()) <= 4
-        # non-imperative: the imperative lives in the CLI, not in nine tokens
+        # non-imperative: the imperative lives in the CLI, not in one stamped line
         assert not token.startswith(("move", "split", "pass", "run", "fix", "add", "write"))
 
 

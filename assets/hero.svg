@@ -30,7 +30,7 @@
 <text x="470.0" y="270.0" font-size="12" fill="#5b6672" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-weight="400">and none of them returns which number decided it.</text>
 <rect x="470" y="292" width="400" height="96" fill="#ffffff" stroke="#b03030" stroke-width="2" rx="3"/>
 <text x="486.0" y="318.0" font-size="14" fill="#b03030" text-anchor="start" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="600">REFUSED   VERTEX_NEAR_EDGE</text>
-<text x="486.0" y="340.0" font-size="11.5" fill="#12161c" text-anchor="start" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="400">look at  (5, 10)  line#s4  edge line#s2  d=2.2e-06</text>
+<text x="486.0" y="340.0" font-size="11.5" fill="#12161c" text-anchor="start" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="400">look at  (5, 2.2e-06)  line#s4  edge line#s0  d=2.2e-06</text>
 <text x="486.0" y="360.0" font-size="11.5" fill="#12161c" text-anchor="start" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="400">action   move this end onto the wall, or away</text>
 <text x="486.0" y="376.0" font-size="11.5" fill="#12161c" text-anchor="start" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="400">         from it by more than 5</text>
 <line x1="40.00" y1="424.00" x2="900.00" y2="424.00" stroke="#c9d0d8" stroke-width="1.5" stroke-linecap="round"/>

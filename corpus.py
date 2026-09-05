@@ -249,10 +249,16 @@ def near_touching_squares(gap: float = 2.2e-6) -> np.ndarray:
 
 
 def wall_missing_the_floor(gap: float = 2.2e-6) -> np.ndarray:
-    """A wall whose end misses a floor by `gap`. No small vertex-pair separation
-    exists anywhere, so a certificate quantified over vertex pairs alone puts the
-    window at drawing scale and closes the gap silently: `faces` off by one."""
-    return np.concatenate([square(), S([[5.0, 10.0 + gap], [5.0, 20.0]])])
+    """A crosswall inside a room whose lower end misses the floor by `gap`.
+
+    Its upper end sits exactly on the ceiling, so the file contains no small
+    vertex-pair separation anywhere: a certificate quantified over vertex pairs
+    alone puts the window at drawing scale and closes the gap silently, and
+    `faces` is off by one. Snapped, the crosswall divides the room and `faces`
+    is 2; left apart it is a dangle and `faces` is 1. Nothing in the file says
+    which, which is why this figure refuses.
+    """
+    return np.concatenate([square(), S([[5.0, gap], [5.0, 10.0]])])
 
 
 def curve_unstable_svg(radius: float = 5.0, flatten: int = 16) -> str:

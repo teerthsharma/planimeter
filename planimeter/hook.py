@@ -1,4 +1,5 @@
-"""The PostToolUse hook. One line of about nine tokens on every geometric write.
+"""The PostToolUse hook. One short line on every geometric write: 7 cl100k_base
+tokens of body and 5 more for a short path, measured by bench.py.
 
 Module scope imports `json`, `sys` and `os` and NOTHING else, and the suffix
 check runs before any package import, so a write to a `.py` file costs one
@@ -31,7 +32,7 @@ SUFFIXES = (".svg",)
 TOOLS = ("Write", "Edit", "MultiEdit", "NotebookEdit")
 
 # One non-imperative token per refusal reason. No coordinates, no imperative and
-# no next action - those live in the CLI, and a nine-token budget spent inviting
+# no next action - those live in the CLI, and a one-line budget spent inviting
 # a question this line cannot answer is not a feature. BAD_INPUT stamps nothing:
 # a half-written file mid-edit is the common case and is not news.
 TOKEN = {

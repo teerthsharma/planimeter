@@ -136,6 +136,25 @@ def test_stable_compares_the_integers_and_not_v_and_e():
     assert stable(r, Refused(REASON.VERTEX_NEAR_EDGE)).reason == REASON.CURVE_UNSTABLE
 
 
+def test_a_budget_refusal_at_2n_is_not_reported_as_an_unstable_curve():
+    """The 2N pass has about twice the vertices by construction, so it can hit
+    the vertex ceiling while the N pass produced a verdict. The two passes did
+    not disagree about the drawing - the second never ran - and an agent told
+    CURVE_UNSTABLE would go re-observe a curve over a machine that ran out of
+    room. Found on 5 of 96 Wikimedia Commons plans, not anticipated."""
+    coarse = Chi(v=9, e=12, pieces=1, faces=4, chi=-3, dangles=0,
+                 t_below=1e-3, t_above=0.5, ratio=500.0, radius=0.0224)
+    fine = Refused(REASON.TOO_MANY_VERTICES, detail="4100 distinct endpoints",
+                   look_at=[{"element": "vertices", "count": 4100}])
+    out = stable(coarse, fine)
+    assert isinstance(out, Refused)
+    assert out.reason == REASON.TOO_MANY_VERTICES and out.kind == KIND.BUDGET
+    assert "4100" in out.detail and "faces 4" in out.detail
+    # a genuine disagreement is still CURVE_UNSTABLE
+    other = Refused(REASON.VERTEX_NEAR_EDGE, detail="1 vertex in the band")
+    assert stable(coarse, other).reason == REASON.CURVE_UNSTABLE
+
+
 def test_a_file_with_no_curves_is_read_once():
     """The second pass is what makes curves affordable to be honest about; a
     floor plan of straight walls must not pay for it."""

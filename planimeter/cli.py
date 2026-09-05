@@ -81,6 +81,9 @@ def _common(p: argparse.ArgumentParser) -> None:
                    help="name the snap radius yourself; still checked, still certified")
     p.add_argument("--rho", type=float, default=None, metavar="R",
                    help="minimum window ratio a scale must clear (policy, default 10)")
+    p.add_argument("--max-vertices", type=int, default=None, metavar="N",
+                   help="raise the vertex ceiling above its default. Cost grows "
+                        "about quadratically; RESULTS.md prints the curve")
     p.add_argument("--flatten", type=int, default=16, metavar="N",
                    help="polyline segments per curve; the run is repeated at 2N")
 
@@ -134,10 +137,12 @@ def _read_source(path: str):
 def cmd_run(a) -> int:
     import planimeter
     if a.demo:
-        res = planimeter.chi(DEMO_SVG, grid=a.grid, rho=a.rho, flatten=a.flatten)
+        res = planimeter.chi(DEMO_SVG, grid=a.grid, rho=a.rho, flatten=a.flatten,
+                             max_vertices=a.max_vertices)
         res.source = res.source or "--demo (built-in 2x2 grid)"
     else:
-        res = planimeter.chi(_read_source(a.file), grid=a.grid, rho=a.rho, flatten=a.flatten)
+        res = planimeter.chi(_read_source(a.file), grid=a.grid, rho=a.rho,
+                             flatten=a.flatten, max_vertices=a.max_vertices)
     code = emit(res, a.json)
     return 0 if (a.refuse_ok and code == EXIT[STATUS.REFUSED]) else code
 
@@ -147,7 +152,8 @@ def cmd_check(a) -> int:
     if a.faces is None and a.pieces is None and a.chi is None:
         return _bad("check needs at least one of --faces, --pieces, --chi")
     c = planimeter.check(_read_source(a.file), faces=a.faces, pieces=a.pieces, chi=a.chi,
-                         grid=a.grid, rho=a.rho, flatten=a.flatten)
+                         grid=a.grid, rho=a.rho, flatten=a.flatten,
+                         max_vertices=a.max_vertices)
     return emit(c, a.json)
 
 

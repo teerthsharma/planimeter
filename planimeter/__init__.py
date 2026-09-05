@@ -45,7 +45,7 @@ def __dir__():
     return sorted(set(__all__) | set(_LAZY))
 
 
-def chi(source, *, grid=None, rho=None, flatten=16):
+def chi(source, *, grid=None, rho=None, flatten=16, max_vertices=None):
     """The verdict for a geometry file, a PathLike, or SVG text.
 
     Raises only OSError / PlanimeterParseError; every geometry outcome is a
@@ -54,13 +54,22 @@ def chi(source, *, grid=None, rho=None, flatten=16):
     from .arrange import chi_segments
     from .read import segments as _segments, stable
     seg = _segments(source, flatten=flatten)
-    verdict = chi_segments(seg, grid=grid, rho=rho, flatten=flatten)
+    verdict = chi_segments(seg, grid=grid, rho=rho, flatten=flatten,
+                           max_vertices=max_vertices)
     if not seg.has_curves:
+        return verdict
+    # A budget refusal cannot be argued with by refining: 2N flattening has
+    # strictly more vertices than N, so the second pass reaches the same ceiling
+    # after paying for a second parse. Measured on a 359,723-segment Commons
+    # floor plan: 45.0 s with the second pass, 22.6 s without, same verdict.
+    from .result import KIND
+    if getattr(verdict, "kind", None) == KIND.BUDGET:
         return verdict
     # A curve has no vertex set, so flattening invents one. The whole pipeline
     # runs again at 2N and the two answers have to agree; see read.stable().
     fine = chi_segments(_segments(source, flatten=2 * flatten),
-                        grid=grid, rho=rho, flatten=flatten)
+                        grid=grid, rho=rho, flatten=flatten,
+                        max_vertices=max_vertices)
     return stable(verdict, fine, seg)
 
 

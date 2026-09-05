@@ -229,6 +229,50 @@ def test_too_many_vertices_is_a_budget_refusal_not_a_geometry_one():
         arrange.VE_BUDGET = old
 
 
+def test_the_vertex_ceiling_is_a_default_a_caller_can_spend_past():
+    """grid(46) is 2,209 vertices: above BRUTE_MAX, so the default refuses. The
+    truth it must produce once the ceiling is raised is closed-form (k*k faces,
+    one piece), so this is not planimeter scored against planimeter."""
+    from corpus import grid
+    seg = grid(46)
+    r = chi_segments(seg)
+    assert isinstance(r, Refused) and r.reason == REASON.TOO_MANY_VERTICES
+    assert r.kind == "budget"
+    assert "--max-vertices" in r.action           # the flag named exists
+    ok = chi_segments(seg, max_vertices=3000)
+    assert isinstance(ok, Chi), getattr(ok, "detail", ok)
+    assert (ok.pieces, ok.faces, ok.chi) == (1, 46 * 46, 1 - 46 * 46)
+
+
+def test_one_flag_moves_both_ceilings():
+    """The pair budget is the vertex ceiling squared, times four. A raised vertex
+    ceiling that left the pair budget at 16,000,000 would refuse TOO_MANY_PAIRS
+    three passes later, which is the same ceiling wearing a different name."""
+    from planimeter.arrange import VE_BUDGET, pair_budget
+    from planimeter.snap import BRUTE_MAX
+    assert pair_budget(None) == VE_BUDGET == 4 * BRUTE_MAX ** 2
+    assert pair_budget(3000) == 36_000_000
+
+
+def test_the_vertex_ceiling_is_checked_before_the_quadratic_pass():
+    """The cheap guard runs first: a set above the ceiling must not pay for the
+    vertex-edge spectrum before being refused. Measured by making that pass
+    raise if it is ever entered."""
+    from planimeter import arrange
+    from corpus import grid
+    real = arrange.vertex_edge_spectrum
+
+    def boom(*a, **kw):
+        raise AssertionError("the quadratic pass ran on a file above the ceiling")
+
+    arrange.vertex_edge_spectrum = boom
+    try:
+        r = chi_segments(grid(46))
+    finally:
+        arrange.vertex_edge_spectrum = real
+    assert isinstance(r, Refused) and r.reason == REASON.TOO_MANY_VERTICES
+
+
 def test_user_grid_keeps_the_certificate_and_says_who_chose_it():
     seg = np.concatenate([square(), S([[0, 0], [10, 10]])])
     a = chi_segments(seg)

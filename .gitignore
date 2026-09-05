@@ -6,3 +6,5 @@ __pycache__/
 build/
 dist/
 .pytest_cache/
+corpus/real/icons/
+corpus/real/commons/

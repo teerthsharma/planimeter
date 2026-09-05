@@ -67,7 +67,10 @@ RHO = 10.0        # policy: the minimum t_above/t_below ratio a window may have
 CAND_MAX = 4      # policy: how many windows are tried, widest ratio first
 FLOOR_ULPS = 4096  # policy: the representability floor, in ulps of the drawing's magnitude
 CLUSTER_MAX = 16  # policy: largest cluster of endpoints treated as one vertex
-BRUTE_MAX = 2000  # budget: vertex ceiling for the exact O(n^2) spanning tree
+BRUTE_MAX = 2000  # budget: default vertex ceiling for the exact O(n^2) spanning
+                  # tree. A default, not a limit of the method: every entry point
+                  # below takes max_vertices=, and the CLI spends it with
+                  # --max-vertices. What that costs is measured in RESULTS.md.
 MARGIN_ULPS = 64  # from the margin lemma, not policy: float64 predicate signs are correct above this
 
 EPS = 2.0 ** -52  # float64 unit roundoff
@@ -130,11 +133,25 @@ def dedup_exact(points: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
 # The Euclidean minimum spanning tree, exactly.
 # ---------------------------------------------------------------------------
 
-def emst(pts: np.ndarray) -> np.ndarray:
+def check_vertex_cap(n: int, max_vertices: Optional[int] = None) -> int:
+    """Raise MemoryError if n vertices is above the ceiling, and return the ceiling.
+
+    Called by `emst`, and called again by `arrange.chi_segments` *before* the
+    vertex-edge pass, because that pass is the one that costs: on a 22,261-vertex
+    Commons plan it spent 40.0 s and then hit this same ceiling anyway.
+    """
+    cap = BRUTE_MAX if max_vertices is None else int(max_vertices)
+    if n > cap:
+        raise MemoryError("%d distinct vertices is above the vertex ceiling %d" % (n, cap))
+    return cap
+
+
+def emst(pts: np.ndarray, *, max_vertices: Optional[int] = None) -> np.ndarray:
     """Exact Euclidean MST edges as an (n-1, 2) index array.
 
     All-pairs Prim, vectorised: O(n^2) in time and O(n) in memory, and exact by
-    construction. Above BRUTE_MAX it refuses.
+    construction. Above the vertex ceiling - BRUTE_MAX unless the caller raises
+    it - it refuses rather than stalling.
 
     The obvious optimisation is Delaunay plus Kruskal, since the EMST is a
     subgraph of *a* Delaunay triangulation. It was tried and dropped: on
@@ -155,8 +172,7 @@ def emst(pts: np.ndarray) -> np.ndarray:
         return np.zeros((0, 2), dtype=np.int64)
     if n == 2:
         return np.array([[0, 1]], dtype=np.int64)
-    if n > BRUTE_MAX:
-        raise MemoryError("%d distinct vertices is above BRUTE_MAX = %d" % (n, BRUTE_MAX))
+    check_vertex_cap(n, max_vertices)
 
     x, y = pts[:, 0], pts[:, 1]
     inside = np.zeros(n, dtype=bool)
@@ -176,10 +192,11 @@ def emst(pts: np.ndarray) -> np.ndarray:
     return out
 
 
-def merge_heights(pts: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+def merge_heights(pts: np.ndarray, *,
+                  max_vertices: Optional[int] = None) -> Tuple[np.ndarray, np.ndarray]:
     """The single-linkage merge spectrum: sorted EMST weights, and the edges
     that carry them, in the same order."""
-    tree = emst(pts)
+    tree = emst(pts, max_vertices=max_vertices)
     if not len(tree):
         return np.zeros(0), tree
     w = np.hypot(pts[tree[:, 0], 0] - pts[tree[:, 1], 0],
@@ -235,7 +252,8 @@ def _build(pts: np.ndarray, weights: np.ndarray, tree: np.ndarray,
                   n_merged=len(pts) - n_clusters, diam_max=diam, source=source)
 
 
-def spectrum(pts: np.ndarray, extra: Optional[np.ndarray] = None):
+def spectrum(pts: np.ndarray, extra: Optional[np.ndarray] = None, *,
+             max_vertices: Optional[int] = None):
     """(spectrum, weights, tree). The spectrum is the representability floor
     followed by every separation above it that could decide the answer: the
     single-linkage merge heights, and - when the caller supplies them - the
@@ -256,7 +274,7 @@ def spectrum(pts: np.ndarray, extra: Optional[np.ndarray] = None):
     own base with sides of 10 - reads as sitting inside the ambiguous band, and
     an ordinary triangle refuses.
     """
-    weights, tree = merge_heights(pts)
+    weights, tree = merge_heights(pts, max_vertices=max_vertices)
     delta = floor_delta(pts)
     vals = [weights[weights > delta]]
     if extra is not None and len(extra):
@@ -267,7 +285,8 @@ def spectrum(pts: np.ndarray, extra: Optional[np.ndarray] = None):
 
 
 def candidates(pts: np.ndarray, rho: float = RHO, cand_max: int = CAND_MAX,
-               extra: Optional[np.ndarray] = None) -> List[Window]:
+               extra: Optional[np.ndarray] = None, *,
+               max_vertices: Optional[int] = None) -> List[Window]:
     """Windows with ratio >= rho: genuine gaps first, widest ratio first, and
     the merge-nothing reading last.
 
@@ -282,7 +301,7 @@ def candidates(pts: np.ndarray, rho: float = RHO, cand_max: int = CAND_MAX,
     Uniqueness is not claimed: a window further down the list might also have
     passed the downstream checks with a different answer.
     """
-    s, weights, tree = spectrum(pts, extra)
+    s, weights, tree = spectrum(pts, extra, max_vertices=max_vertices)
     if len(s) < 2:
         return []
     lo, hi = s[:-1], s[1:]
@@ -301,7 +320,8 @@ def candidates(pts: np.ndarray, rho: float = RHO, cand_max: int = CAND_MAX,
     return out
 
 
-def window(pts: np.ndarray, *, rho: float = RHO, extra: Optional[np.ndarray] = None):
+def window(pts: np.ndarray, *, rho: float = RHO, extra: Optional[np.ndarray] = None,
+           max_vertices: Optional[int] = None):
     """The widest certified window for a point set, or NO_STABLE_SCALE.
 
     Exposed on its own because the README's honest seam says this rule is about
@@ -311,14 +331,15 @@ def window(pts: np.ndarray, *, rho: float = RHO, extra: Optional[np.ndarray] = N
     loop that walks these candidates.
     """
     pts = np.asarray(pts, dtype=np.float64).reshape(-1, 2)
-    cands = candidates(pts, rho=rho, cand_max=1, extra=extra)
+    cands = candidates(pts, rho=rho, cand_max=1, extra=extra, max_vertices=max_vertices)
     if cands:
         return cands[0]
-    return _no_scale(pts, rho, extra)
+    return _no_scale(pts, rho, extra, max_vertices=max_vertices)
 
 
-def _no_scale(pts: np.ndarray, rho: float, extra=None) -> Refused:
-    s, _, _ = spectrum(pts, extra)
+def _no_scale(pts: np.ndarray, rho: float, extra=None, *,
+              max_vertices: Optional[int] = None) -> Refused:
+    s, _, _ = spectrum(pts, extra, max_vertices=max_vertices)
     sites = []
     if len(s) >= 2:
         r = s[1:] / s[:-1]
@@ -327,7 +348,11 @@ def _no_scale(pts: np.ndarray, rho: float, extra=None) -> Refused:
                           "failed": "ratio below rho" if r[k] < rho else "cluster above CLUSTER_MAX"})
     return Refused(
         REASON.NO_STABLE_SCALE,
-        detail=("no gap in the %d merge heights has ratio >= %g; the three widest are listed "
+        # "separations", not "merge heights": the spectrum carries the
+        # vertex-to-edge distances too, and a real file made the wording
+        # arithmetically impossible - 7,613,564 reported for a drawing whose
+        # MST has at most 5,999 heights.
+        detail=("no gap in the %d separations has ratio >= %g; the three widest are listed "
                 "as [t_below, t_above]" % (max(len(s) - 1, 0), rho)),
         look_at=sites,
         action="write coincident vertices at identical coordinates, or pass --grid X "
@@ -336,7 +361,8 @@ def _no_scale(pts: np.ndarray, rho: float, extra=None) -> Refused:
 
 
 def window_from_grid(pts: np.ndarray, radius: float, *, rho: float = RHO,
-                     extra: Optional[np.ndarray] = None):
+                     extra: Optional[np.ndarray] = None,
+                     max_vertices: Optional[int] = None):
     """The window a user-supplied radius lands in.
 
     Provenance and verification are orthogonal: a supplied radius that lands
@@ -344,7 +370,7 @@ def window_from_grid(pts: np.ndarray, radius: float, *, rho: float = RHO,
     is exactly as verified as a derived one, and grid_source says which it was.
     """
     pts = np.asarray(pts, dtype=np.float64).reshape(-1, 2)
-    s, weights, tree = spectrum(pts, extra)
+    s, weights, tree = spectrum(pts, extra, max_vertices=max_vertices)
     if radius < s[0]:
         return Refused(
             REASON.NO_STABLE_SCALE,

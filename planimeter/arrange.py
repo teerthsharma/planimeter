@@ -64,6 +64,17 @@ from .snap import (CAND_MAX, RHO, Window, candidates, dedup_exact, margin,
 # and the refusal is what a floor plan too large for this pass gets today.
 VE_BUDGET = 16_000_000
 
+
+def pair_budget(max_vertices=None) -> int:
+    """The pair ceiling that goes with a vertex ceiling.
+
+    The two budgets are one quadratic budget stated twice - VE_BUDGET is
+    exactly 4 x BRUTE_MAX squared - so one flag moves both and a raised
+    vertex ceiling cannot be silently undone by the pair ceiling three
+    passes later.
+    """
+    return VE_BUDGET if max_vertices is None else 4 * int(max_vertices) ** 2
+
 # A refusal from one candidate window either ends the run or moves to the next
 # window, and which one is not a detail:
 #
@@ -180,7 +191,8 @@ def crossing_point(pts, ends, i, j):
     return [float(p[0] + u * r[0]), float(p[1] + u * r[1])]
 
 
-def vertex_edge_spectrum(pts: np.ndarray, ends: np.ndarray, block: int = 256) -> np.ndarray:
+def vertex_edge_spectrum(pts: np.ndarray, ends: np.ndarray, block: int = 256,
+                         budget: Optional[int] = None) -> np.ndarray:
     """Every non-incident vertex-to-segment distance, on the file's own points,
     before any clustering.
 
@@ -194,9 +206,10 @@ def vertex_edge_spectrum(pts: np.ndarray, ends: np.ndarray, block: int = 256) ->
     tolerance and the thing the tolerance decides.
     """
     n, m = len(pts), len(ends)
-    if n * m > VE_BUDGET:
+    cap = VE_BUDGET if budget is None else int(budget)
+    if n * m > cap:
         raise MemoryError("%d vertices x %d segments is above the %d pair budget"
-                          % (n, m, VE_BUDGET))
+                          % (n, m, cap))
     # ponytail: exact all-pairs, blocked to bound memory. The ceiling is
     # published rather than hidden; the upgrade path is a sweep line, and the
     # refusal above is what a floor plan too large for this pass gets today.
@@ -245,7 +258,8 @@ def _as_segments(obj) -> Tuple[np.ndarray, List[str], Dict[str, int], str, str, 
 
 def chi_segments(seg, *, grid: Optional[float] = None, rho: Optional[float] = None,
                  cand_max: int = CAND_MAX, flatten: Any = None,
-                 ids: Optional[Sequence[str]] = None, source: str = ""):
+                 ids: Optional[Sequence[str]] = None, source: str = "",
+                 max_vertices: Optional[int] = None):
     """The verdict for a segment set. Returns Chi or Refused; never raises for a
     geometry reason.
 
@@ -262,6 +276,7 @@ def chi_segments(seg, *, grid: Optional[float] = None, rho: Optional[float] = No
     if flatten is not None:
         flat = (int(flatten), int(flatten) * 2) if np.isscalar(flatten) else tuple(flatten)
     rho = RHO if rho is None else float(rho)
+    budget = pair_budget(max_vertices)
 
     if len(arr) == 0:
         return Refused(REASON.NO_GEOMETRY,
@@ -274,26 +289,30 @@ def chi_segments(seg, *, grid: Optional[float] = None, rho: Optional[float] = No
     ends = flat_idx.reshape(len(arr), 2)
 
     try:
-        ve = vertex_edge_spectrum(pts, ends)
-        cands = ([window_from_grid(pts, float(grid), rho=rho, extra=ve)] if grid is not None
-                 else candidates(pts, rho=rho, cand_max=cand_max, extra=ve))
+        _snap.check_vertex_cap(len(pts), max_vertices)
+        ve = vertex_edge_spectrum(pts, ends, budget=budget)
+        cands = ([window_from_grid(pts, float(grid), rho=rho, extra=ve,
+                                   max_vertices=max_vertices)] if grid is not None
+                 else candidates(pts, rho=rho, cand_max=cand_max, extra=ve,
+                                 max_vertices=max_vertices))
     except MemoryError as exc:
         return Refused(REASON.TOO_MANY_VERTICES,
                        detail="%d distinct endpoints, %d segments; %s" % (len(pts), len(arr), exc),
                        look_at=[{"element": "vertices", "count": len(pts)}],
-                       action="pass --grid to skip the window search, or split the file",
+                       action="raise --max-vertices (cost grows about quadratically; see RESULTS.md), or split the file",
                        source=src)
     if cands and isinstance(cands[0], Refused):
         cands[0].source = src
         return cands[0]
     if not cands:
-        r = _snap._no_scale(pts, rho, ve)
+        r = _snap._no_scale(pts, rho, ve, max_vertices=max_vertices)
         r.source = src
         return r
 
     tried: List[Refused] = []
     for w in cands:
-        out = _try_window(pts, ends, auto_ids, w, rho, flat, skipped, src, fmt, len(cands))
+        out = _try_window(pts, ends, auto_ids, w, rho, flat, skipped, src, fmt,
+                          len(cands), budget)
         if isinstance(out, Chi):
             return out
         w.rejected = out.reason
@@ -311,7 +330,8 @@ def chi_segments(seg, *, grid: Optional[float] = None, rho: Optional[float] = No
     return first
 
 
-def _try_window(pts, ends, ids, w: Window, rho, flat, skipped, src, fmt, n_cands):
+def _try_window(pts, ends, ids, w: Window, rho, flat, skipped, src, fmt, n_cands,
+                budget: int = VE_BUDGET):
     n_seg = len(ends)
     labels = np.asarray(w.labels, dtype=np.int64)
     R = pts[np.asarray(w.reps, dtype=np.int64)]
@@ -353,12 +373,12 @@ def _try_window(pts, ends, ids, w: Window, rho, flat, skipped, src, fmt, n_cands
 
     # ---- P2: robustness. Every (vertex, non-incident edge) pair is at 0 or
     #      at least t_above; distance 0 subdivides, the band refuses. -------
-    if len(R) * len(edges) > VE_BUDGET:
+    if len(R) * len(edges) > budget:
         return Refused(REASON.TOO_MANY_PAIRS,
                        detail="%d vertices x %d edges is above the %d pair budget"
-                              % (len(R), len(edges), VE_BUDGET),
+                              % (len(R), len(edges), budget),
                        look_at=[{"element": "pairs", "count": len(R) * len(edges)}],
-                       action="split the file, or raise --max-pairs", source=src)
+                       action="split the file, or raise --max-vertices", source=src)
     ei, vi, d, t = near_incidences(R, edges, w.t_above)
 
     band = np.nonzero(d > 0.0)[0]
@@ -398,12 +418,12 @@ def _try_window(pts, ends, ids, w: Window, rho, flat, skipped, src, fmt, n_cands
     fowner = list(final.values())
 
     # ---- P3: plane embedding ---------------------------------------------
-    if len(fedges) ** 2 > VE_BUDGET:
+    if len(fedges) ** 2 > budget:
         return Refused(REASON.TOO_MANY_PAIRS,
                        detail="%d edges squared is above the %d pair budget"
-                              % (len(fedges), VE_BUDGET),
+                              % (len(fedges), budget),
                        look_at=[{"element": "pairs", "count": len(fedges) ** 2}],
-                       action="split the file, or raise --max-pairs", source=src)
+                       action="split the file, or raise --max-vertices", source=src)
     bad = crossings(R, fedges)
     if len(bad):
         rows = [{"element": fowner[i], "other": fowner[j],

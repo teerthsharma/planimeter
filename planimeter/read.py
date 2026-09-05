@@ -141,17 +141,32 @@ def segments(source: Any, *, flatten: int = FLATTEN) -> Segments:
     except ImportError as exc:                                   # pragma: no cover
         raise PlanimeterParseError("svgelements is required to read SVG: %s" % exc)
 
+    n_empty_paths = 0
     try:
         tree = SVG.parse(io.StringIO(text), reify=True)
         elements = list(tree.elements())
     except PlanimeterParseError:                                 # pragma: no cover
         raise
     except Exception as exc:
-        raise PlanimeterParseError("%s: %s: %s" % (name, type(exc).__name__, exc))
+        # Measured on real files, not anticipated: 2 of 96 Wikimedia Commons
+        # floor plans carry an Inkscape <path> with no `d`, and svgelements
+        # raises TypeError inside its own parser on it. An element with no `d`
+        # has no geometry by the SVG grammar, so dropping it invents nothing -
+        # but it is reported as `path-without-d`, never dropped silently.
+        text2, n_empty_paths = _drop_empty_paths(text)
+        if not n_empty_paths:
+            raise PlanimeterParseError("%s: %s: %s" % (name, type(exc).__name__, exc))
+        try:
+            tree = SVG.parse(io.StringIO(text2), reify=True)
+            elements = list(tree.elements())
+        except Exception as exc2:
+            raise PlanimeterParseError("%s: %s: %s" % (name, type(exc2).__name__, exc2))
 
     out: List[List[List[float]]] = []
     ids: List[str] = []
     skipped: Dict[str, int] = {}
+    if n_empty_paths:
+        skipped["path-without-d"] = n_empty_paths
     counter: Dict[str, int] = {}
     closes: List[int] = []
     n_curves = n_degenerate = n_elements = 0
@@ -205,6 +220,30 @@ def segments(source: Any, *, flatten: int = FLATTEN) -> Segments:
     return Segments(seg=seg, ids=ids, skipped=skipped, source=name,
                     source_format="svg", flatten=(n, 2 * n), n_curves=n_curves,
                     n_degenerate=n_degenerate, n_elements=n_elements)
+
+
+def _drop_empty_paths(text: str) -> Tuple[str, int]:
+    """Strip `<path>` elements carrying no `d`, and say how many.
+
+    Only ever called after `svgelements` has already failed on the file. No
+    coordinate is added, moved or rounded: the elements removed have no
+    coordinates at all.
+    """
+    import xml.etree.ElementTree as ET
+    try:
+        root = ET.fromstring(text)
+    except ET.ParseError:
+        return text, 0
+    n = 0
+    for parent in root.iter():
+        for child in list(parent):
+            if child.tag.split("}")[-1] == "path" and not (child.get("d") or "").strip():
+                parent.remove(child)
+                n += 1
+    if not n:
+        return text, 0
+    ET.register_namespace("", "http://www.w3.org/2000/svg")
+    return ET.tostring(root, encoding="unicode"), n
 
 
 def _drop_spurious_closures(seg: np.ndarray, ids: List[str],
@@ -261,6 +300,24 @@ def stable(coarse, fine, seg: Optional[Segments] = None):
     if _shape(coarse) == _shape(fine):
         return coarse
     flat = tuple(getattr(seg, "flatten", (FLATTEN, 2 * FLATTEN)))
+    # Measured on real files, not anticipated: on 5 of 96 Wikimedia Commons
+    # plans the N pass produced a verdict and the 2N pass - which has about
+    # twice the vertices by construction - hit the vertex ceiling instead.
+    # The two passes did not disagree about the drawing; the second one never
+    # ran. Calling that CURVE_UNSTABLE sends an agent to re-observe a curve
+    # over a machine that ran out of room, so the budget refusal is what is
+    # returned, with its own kind, and the N pass verdict is carried in the
+    # detail.
+    if getattr(fine, "kind", "") == KIND.BUDGET:
+        return Refused(
+            fine.reason,
+            detail="flattening at %d gave %s; at %d the stability pass did not fit: %s"
+                   % (flat[0], _say(coarse), flat[1], fine.detail),
+            look_at=list(fine.look_at),
+            action="raise --max-vertices past the 2N pass, or replace the curve "
+                   "with a polyline",
+            source=getattr(seg, "source", "") or getattr(coarse, "source", ""),
+        )
     src = getattr(seg, "source", "") or getattr(coarse, "source", "")
     ids = list(getattr(seg, "ids", ()) or ())
     curves = sorted({i for i in ids})[:4]

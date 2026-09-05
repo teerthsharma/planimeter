@@ -28,7 +28,7 @@ dependencies = [
 [project.optional-dependencies]
 # shapely here is a benchmark opponent and the control behind the Delaunay
 # measurement, never a runtime dependency.
-test = ["pytest>=7.4", "scikit-image>=0.22", "networkx>=3", "shapely>=2.0"]
+test = ["pytest>=7.4", "scikit-image>=0.22", "networkx>=3", "shapely>=2.0", "tiktoken>=0.5"]
 
 [project.scripts]
 planimeter = "planimeter.cli:main"

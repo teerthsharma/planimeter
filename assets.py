@@ -235,44 +235,42 @@ def wires(P, edges, f, colour=INK, w=2.0):
 # ---------------------------------------------------------------------------
 # 1. hero - the product doing its job on a real floor plan
 # ---------------------------------------------------------------------------
-def hero(W=1600, H=900):
+def hero(W=1600, H=480):
     from planimeter.read import segments
     src = os.path.join(COMMONS, "Akori_church_plan.svg")
     c, P, edges, cyc = arrangement(src, max_vertices=3000)
     n_curves = segments(src).n_curves
-    f, _ = fit(P, (72, 182, 856, 610))
+    f, _ = fit(P, (72, 58, 856, 356))
 
-    g = [T(64, 76, "planimeter", 46, INK, family=MONO, weight="700"),
-         T(378, 76, "three integers for a geometry file, and the radius that decided them",
-           28, MUTED),
-         LINE(64, 112, W - 64, 112, GRID, 2)]
+    g = [T(72, 36, "Akori_church_plan.svg", 26, MUTED, family=MONO),
+         T(928, 36, "%d segments, %d curves flattened"
+           % (len(segments(src).seg), n_curves), 26, MUTED, anchor="end",
+           family=MONO)]
     g += [poly(P, k, f, CERT, 0.20) for k in cyc]
     g.append(wires(P, edges, f, INK, 2.0))
-    g.append(T(72, 158, "Akori_church_plan.svg", 27, MUTED, family=MONO))
-    g.append(T(928, 158, "%d segments, %d curves flattened" % (len(segments(src).seg), n_curves),
-               27, MUTED, anchor="end", family=MONO))
 
     x = 1000
-    g.append(RECT(x, 152, 536, 66, PANEL, CERT, 2, 6))
-    g.append(T(x + 26, 196, "CERTIFIED", 34, CERT, family=MONO, weight="700"))
+    g.append(RECT(x, 18, 536, 54, PANEL, CERT, 2, 6))
+    g.append(T(x + 24, 56, "CERTIFIED", 30, CERT, family=MONO, weight="700"))
     rows = [(c.pieces, "pieces", "connected components"),
             (c.faces, "faces", "bounded regions enclosed"),
             (c.chi, "chi", "pieces minus faces")]
-    y = 260
+    y = 78
     for n, name, gloss in rows:
-        g.append(T(x + 148, y + 88, str(n), 112, CERT, anchor="end", family=MONO, weight="700"))
-        g.append(T(x + 176, y + 58, name, 42, INK, family=MONO))
-        g.append(T(x + 176, y + 94, gloss, 26, MUTED))
-        y += 134
-    g.append(LINE(x, 690, W - 64, 690, GRID, 2))
-    g.append(T(x, 734, "radius  %s" % eng(c.radius), 28, INK, family=MONO))
-    g.append(T(x, 772, "window  [%s, %s)" % (eng(c.t_below, 4), eng(c.t_above, 4)),
-               28, INK, family=MONO))
-    g.append(T(x, 810, "ratio   %s and empty" % format(round(c.ratio), ","),
-               28, MUTED, family=MONO))
-    g.append(T(64, 862, "$", 30, MUTED, family=MONO))
-    g.append(T(94, 862, "planimeter Akori_church_plan.svg --max-vertices 3000",
-               30, INK, family=MONO))
+        g.append(T(x + 122, y + 72, str(n), 92, CERT, anchor="end", family=MONO,
+                   weight="700"))
+        g.append(T(x + 148, y + 48, name, 34, INK, family=MONO))
+        g.append(T(x + 148, y + 77, gloss, 22, MUTED))
+        y += 92
+    g.append(LINE(x, 364, W - 64, 364, GRID, 2))
+    g.append(T(x, 396, "radius  %s" % eng(c.radius), 25, INK, family=MONO))
+    g.append(T(x, 426, "window  [%s, %s)" % (eng(c.t_below, 4), eng(c.t_above, 4)),
+               25, INK, family=MONO))
+    g.append(T(x, 456, "ratio   %s and empty" % format(round(c.ratio), ","),
+               25, MUTED, family=MONO))
+    g.append(T(72, 456, "$", 27, MUTED, family=MONO))
+    g.append(T(100, 456, "planimeter Akori_church_plan.svg --max-vertices 3000",
+               27, INK, family=MONO))
     write("hero.svg", g, W, H)
     return c, P, edges, cyc
 

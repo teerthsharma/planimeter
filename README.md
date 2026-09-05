@@ -2,8 +2,6 @@
 
 <p align="center"><b>Your agent edited a drawing. This says whether the room count changed — or where it can't tell.</b></p>
 
-<p align="center">Invented by <b>Teerth Sharma</b> · <a href="mailto:teerths57@gmail.com">teerths57@gmail.com</a> · <a href="https://github.com/teerthsharma/planimeter">github.com/teerthsharma/planimeter</a></p>
-
 <img src="https://raw.githubusercontent.com/teerthsharma/planimeter/main/assets/hero.svg" width="100%" alt="A Wikimedia Commons church floor plan with its 13 enclosed rooms shaded green, beside the verdict CERTIFIED: 13 pieces, 13 faces, chi 0, at snap radius 7.03e-08">
 
 ```bash

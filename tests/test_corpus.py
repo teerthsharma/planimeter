@@ -251,3 +251,26 @@ def test_a_figure_jittered_past_its_own_feature_gap_is_a_different_figure():
         if isinstance(r, Chi) and (r.pieces, r.faces) != (truth[2], truth[3]):
             wrong += 1
     assert wrong > 0, "5e-2 is outside the schedule because it is measurably outside"
+
+
+def test_the_jitter_stratum_is_the_same_draws_in_every_interpreter():
+    """The seeding fix, pinned. `hash()` on a str is salted per process, so the
+    stratum used to be a different 528 draws in every run and no wrong row could
+    be reproduced for investigation. Control: the same three draws taken in two
+    subprocesses under different PYTHONHASHSEED values, compared bitwise."""
+    import os
+    import subprocess
+    import sys
+
+    probe = (
+        "import sys, numpy as np; sys.path.insert(0, %r); import corpus;"
+        "d = list(corpus.jitter_stratum(['square'], ratios=(1e-4,), seeds=3));"
+        "print(''.join(x['seg'].tobytes().hex() for x in d))"
+        % os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    )
+    out = []
+    for seed in ("0", "12345"):
+        env = dict(os.environ, PYTHONHASHSEED=seed)
+        out.append(subprocess.run([sys.executable, "-c", probe], env=env,
+                                  capture_output=True, text=True, check=True).stdout)
+    assert out[0] == out[1] and out[0].strip()

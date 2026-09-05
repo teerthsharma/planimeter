@@ -31,6 +31,7 @@ from __future__ import annotations
 import json
 import math
 import pathlib
+import zlib
 from typing import Dict, Iterator, List, Optional, Sequence, Tuple
 
 import numpy as np
@@ -368,7 +369,11 @@ def jitter_stratum(names: Optional[Sequence[str]] = None,
             continue
         for ratio in ratios:
             for seed in range(seeds):
-                rng = np.random.default_rng(abs(hash((name, ratio, seed))) % (2 ** 32))
+                # zlib.crc32 of a formatted string, never hash(): str hashing is
+                # salted per interpreter, so hash() made the stratum a different
+                # set of draws in every process and no wrong row was reproducible.
+                key = ("%s|%.17g|%d" % (name, ratio, seed)).encode()
+                rng = np.random.default_rng(zlib.crc32(key))
                 yield {"family": name, "ratio": float(ratio), "seed": seed,
                        "gap": g, "sigma": ratio * g, "truth": truth,
                        "seg": jitter(seg, ratio * g, rng)}

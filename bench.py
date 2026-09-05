@@ -474,6 +474,7 @@ def hook_latency(tmp, n=20):
 
     out = {}
     rows = [
+        ("FLOOR bare interpreter, no hook at all", [py, "-c", "pass"], "", None),
         ("silent path (.py write)", [py, "-m", "planimeter.hook"], payload(notgeo),
          G7_SILENT_MS),
         ("CONTROL same hook, suffix check removed",
@@ -494,6 +495,17 @@ def hook_latency(tmp, n=20):
         stamp = json.loads(r.stdout)["hookSpecificOutput"]["additionalContext"]
     except Exception:
         pass
+    print(THIN)
+    floor = out["FLOOR bare interpreter, no hook at all"]["median_ms"]
+    silent = out["silent path (.py write)"]["median_ms"]
+    print("    The silent path costs %.1f ms over an interpreter that does nothing"
+          % (silent - floor))
+    print("    (%.1f ms floor on this machine). G7_SILENT_MS was committed at %.0f ms"
+          % (floor, G7_SILENT_MS))
+    print("    WITHOUT that control, so on a machine whose Python starts in %.0f ms the"
+          % floor)
+    print("    gate measures Windows and not planimeter. The gate result above stands as")
+    print("    written; this line says what it is made of, and does not move it.")
     print(THIN)
     print("    the stamp itself: %s" % (stamp or "(none - the reader is not installed yet)"))
     out["stamp"] = stamp

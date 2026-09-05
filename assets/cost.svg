@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 566" width="940" height="566" font-family="system-ui,-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
+<rect width="940" height="566" fill="#fbfaf7"/>
+<text x="40.0" y="44.0" font-size="20" fill="#12161c" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-weight="600">G3  cost, and it loses</text>
+<text x="40.0" y="66.0" font-size="12.5" fill="#5b6672" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-weight="400">grid(k) end to end, vertices against milliseconds, both log10. Best of 3, one machine.</text>
+<line x1="100.00" y1="90.00" x2="100.00" y2="400.00" stroke="#c9d0d8" stroke-width="1" stroke-linecap="round" stroke-dasharray="2 5"/>
+<text x="100.0" y="420.0" font-size="11.5" fill="#5b6672" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="400">1e1</text>
+<line x1="361.54" y1="90.00" x2="361.54" y2="400.00" stroke="#c9d0d8" stroke-width="1" stroke-linecap="round" stroke-dasharray="2 5"/>
+<text x="361.5" y="420.0" font-size="11.5" fill="#5b6672" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="400">1e2</text>
+<line x1="623.08" y1="90.00" x2="623.08" y2="400.00" stroke="#c9d0d8" stroke-width="1" stroke-linecap="round" stroke-dasharray="2 5"/>
+<text x="623.1" y="420.0" font-size="11.5" fill="#5b6672" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="400">1e3</text>
+<line x1="100.00" y1="347.07" x2="780.00" y2="347.07" stroke="#c9d0d8" stroke-width="1" stroke-linecap="round" stroke-dasharray="2 5"/>
+<text x="90.0" y="351.1" font-size="11.5" fill="#5b6672" text-anchor="end" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="400">1 ms</text>
+<line x1="100.00" y1="271.46" x2="780.00" y2="271.46" stroke="#c9d0d8" stroke-width="1" stroke-linecap="round" stroke-dasharray="2 5"/>
+<text x="90.0" y="275.5" font-size="11.5" fill="#5b6672" text-anchor="end" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="400">10 ms</text>
+<line x1="100.00" y1="195.85" x2="780.00" y2="195.85" stroke="#c9d0d8" stroke-width="1" stroke-linecap="round" stroke-dasharray="2 5"/>
+<text x="90.0" y="199.9" font-size="11.5" fill="#5b6672" text-anchor="end" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="400">100 ms</text>
+<line x1="100.00" y1="120.24" x2="780.00" y2="120.24" stroke="#c9d0d8" stroke-width="1" stroke-linecap="round" stroke-dasharray="2 5"/>
+<text x="90.0" y="124.2" font-size="11.5" fill="#5b6672" text-anchor="end" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="400">1000 ms</text>
+<line x1="100.00" y1="400.00" x2="780.00" y2="400.00" stroke="#5b6672" stroke-width="1.5" stroke-linecap="round"/>
+<line x1="100.00" y1="90.00" x2="100.00" y2="400.00" stroke="#5b6672" stroke-width="1.5" stroke-linecap="round"/>
+<text x="780.0" y="440.0" font-size="12.5" fill="#5b6672" text-anchor="end" font-family="system-ui,-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-weight="400">vertices</text>
+<polyline points="204.1,363.8 337.6,315.7 421.1,261.9 482.1,224.3 530.1,198.6 569.7,172.0 603.4,152.4 632.8,134.7 658.8,119.5 682.1,108.5 698.1,99.0" fill="none" stroke="#12161c" stroke-width="2.5"/>
+<circle cx="204.1" cy="363.8" r="3.5" fill="#12161c"/>
+<circle cx="337.6" cy="315.7" r="3.5" fill="#12161c"/>
+<circle cx="421.1" cy="261.9" r="3.5" fill="#12161c"/>
+<circle cx="482.1" cy="224.3" r="3.5" fill="#12161c"/>
+<circle cx="530.1" cy="198.6" r="3.5" fill="#12161c"/>
+<circle cx="569.7" cy="172.0" r="3.5" fill="#12161c"/>
+<circle cx="603.4" cy="152.4" r="3.5" fill="#12161c"/>
+<circle cx="632.8" cy="134.7" r="3.5" fill="#12161c"/>
+<circle cx="658.8" cy="119.5" r="3.5" fill="#12161c"/>
+<circle cx="682.1" cy="108.5" r="3.5" fill="#12161c"/>
+<circle cx="698.1" cy="99.0" r="3.5" fill="#12161c"/>
+<line x1="204.08" y1="363.85" x2="780.00" y2="197.35" stroke="#5b6672" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="6 5"/>
+<text x="649.2" y="267.7" font-size="11.5" fill="#5b6672" text-anchor="start" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="400">slope 1, for reference</text>
+<text x="131.4" y="116.5" font-size="13" fill="#12161c" text-anchor="start" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="600">fitted exponent 1.87</text>
+<text x="131.4" y="135.4" font-size="11.5" fill="#b03030" text-anchor="start" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="400">the gate kills above 1.3</text>
+<line x1="40.00" y1="456.00" x2="900.00" y2="456.00" stroke="#c9d0d8" stroke-width="1.5" stroke-linecap="round"/>
+<text x="40.0" y="482.0" font-size="15" fill="#b03030" text-anchor="start" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700">NOT EARNED</text>
+<text x="148.0" y="482.0" font-size="13.5" fill="#12161c" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-weight="400">"usable as a hook on a real floor plan" is withdrawn, not softened.</text>
+<text x="40.0" y="504.0" font-size="12.5" fill="#5b6672" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-weight="400">Extrapolated to 1e5 vertices: 861,535 ms against a 50 ms gate. The comfortable hook</text>
+<text x="40.0" y="522.0" font-size="12.5" fill="#5b6672" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-weight="400">range is under about 600 segments: 42 ms at 544, 92 ms at 840, 1.9 s at 3,784.</text>
+<text x="40.0" y="546.0" font-size="12.5" fill="#5b6672" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-weight="400">The cost is the all-pairs vertex-to-edge pass the certificate quantifies over.</text>
+</svg>

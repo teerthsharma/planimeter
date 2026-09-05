@@ -22,9 +22,15 @@ documentation commit that follows moves `HEAD` without moving a number.
 ```
 python -m venv .venv
 .venv/Scripts/pip install -e ".[test]"
-.venv/Scripts/python -m pytest -q         # 474 passed
-.venv/Scripts/python bench.py             # the tables below, 61.3 s
+.venv/Scripts/python -m pytest -q         # 479 passed
+.venv/Scripts/python bench.py             # sections 1-8, 61.3 s
+.venv/Scripts/python realdata.py fetch    # 61 MB, not committed; section 11
+.venv/Scripts/python realdata.py run      # section 11
 ```
+
+Sections 1 through 10 are `bench.py`; section 11 is `realdata.py` and runs on files this
+repository did not write. `bench.py` is the run of record for the first ten and stamps its
+own commit; section 11 stamps the commit it was run at in its own header.
 
 The footer of that run reads `commit 5713012  machine WIN-16QAL06O9GB  python 3.11.9
 PYTHONHASHSEED=0  61.3 s`. Sections 1, 2 and 3 are bit-identical across every run on this
@@ -410,20 +416,26 @@ to the accuracy row rather than in a footnote.
   its own output. If the sampled median clears roughly 20 of 24 on this stratum, the
   accuracy headline is dead and what remains is the printed scale and the hook slot. That
   outcome would be published, not hidden.
-- **G5 and G6** need `corpus/found/` — roughly 30 real agent-written SVGs with truth
-  established by a second method before planimeter is run on them. It holds no SVGs, and
-  `corpus/found/README.md` states the collection method and the reporting rule rather than
-  inventing rows. `bench.py` reads that emptiness off the filesystem when it prints the
-  line above rather than asserting it, so the row retires itself the day files arrive. Until it has files, no claim about real-world refusal rates or about
-  whether the certified scale ever changes a real answer is made here. `corpus.found()`
-  returns `[]` and a test asserts it says so.
+- **G5 and G6 are half answered, by §11, and the half that is missing is the one that was
+  specified.** `corpus/found/` still holds no SVGs — its specification is thirty real
+  *agent-written* files with truth established by a second method *before* planimeter runs,
+  and `bench.py` still reads that emptiness off the filesystem rather than asserting it.
+  What §11 supplies instead is 13,777 real files nobody here drew, from npm and Wikimedia
+  Commons, with **no truth at all**: a refusal histogram by reason code (G5's deliverable,
+  on the wrong corpus) and a measurement of how often the certified radius and a fixed
+  round-6 radius disagree on real input, 7 of 30, with a third method siding with the
+  certified one 7 times out of 7 (G6's question, answered without an answer key). **Neither
+  becomes an accuracy number**, and the agent-written corpus is still uncollected.
 - **G4 was cut, not repaired.** The vision comparison scored perfectly only because it read
   exact coordinate text rather than a render. Re-running it against a raster is a different
   experiment than the one that was reported.
 - **The per-session transcript-cost ratio is half-measured.** The stamp's 7 tokens exist;
   the sampled-script denominator does not, because it comes from G1.
 - **A clean refusal cliff is NOT EARNED** (§2).
-- **"Usable as a hook on a real floor plan" is NOT EARNED** (§5).
+- **"Usable as a hook on a real floor plan" is NOT EARNED** (§5), and §11 puts a number on
+  it: **0 of 96** Wikimedia Commons floor plans certify at the default ceiling, 1 of 96 at
+  `--max-vertices 6000`, and the median plan carries three times the default ceiling's worth
+  of vertices. On 13,681 icon files the same default answers 79.4%.
 - **Uniqueness of the certified scale is not established.** At most `CAND_MAX = 4` windows
   are tried, widest ratio first, first pass wins. A second window might also have passed
   with a different answer.
@@ -446,17 +458,254 @@ to the accuracy row rather than in a footnote.
 | planimeter's cost curve (G3) | exponent 1.825 against a 1.3 gate | the gate, committed first |
 | planimeter's refusal cliff | no level certifies everything | the shape the design predicted |
 | planimeter on two squares a tenth apart | one piece where a reader sees two | the picture |
+| round-6 snap on 30 real icon files | 7 of 30 integers moved | `skimage.euler_number` @ 4096 px, which sided with the arrangement 7 of 7 |
+| planimeter on 96 Commons floor plans | 0 answered at the default ceiling, 1 at `--max-vertices 6000` | its own advertised use case |
+| planimeter on 13,681 real icon files | 2,819 refused, 20.6% | the same files, answered 10,862 times |
+| the guard-ordering change, at the default ceiling | no effect outside the machine's own drift | a repeat of its own faster arm |
 
-The last four rows are planimeter's. A table of opponents without them would not be a
+The last eight rows are planimeter's. A table of opponents without them would not be a
 benchmark.
 
 ---
 
-## 11. Limits
+## 11. Real input — files this repository did not write
+
+**Question.** Sections 1 through 8 all score against truth this repository constructed. What
+happens to files nobody here drew, how often does the tool refuse them, and for what?
+
+**Code of record.** Commit `4a7a3dc`, same machine as the header, `svgelements 1.9.6`,
+`scikit-image 0.26.0`. The commit that records this section adds documentation, one
+corrected source comment and one reader test, and moves no number.
+
+**Corpus, and where its provenance comes from.** Both sets are fetched by a pinned recipe in
+`realdata.py` rather than curated file by file: a corpus somebody picked one file at a time
+is a corpus somebody could have picked to win. **Neither set carries a ground truth, and
+neither is treated as if it did** — where a number below is called agreement it is agreement
+between two methods, not a score against an answer key.
+
+| set | provenance | files | in the repository |
+|---|---|---|---|
+| `sample` | every kth of the icon set by sorted name, under 32 KB | 30 | **yes**, `corpus/real/sample/` with the three upstream `LICENSE` files |
+| `icons` | `@tabler/icons 3.46.0`, `feather-icons 4.29.2`, `bootstrap-icons 1.13.1` from the npm registry, MIT | 13,681 | no — 32 MB. `python realdata.py fetch --set icons` |
+| `plans` | Wikimedia Commons full-text search, `filetype:drawing`, four fixed terms × 25 | 96 | no — 29 MB and share-alike licences. `python realdata.py fetch --set plans`, and `_meta.json` records the per-file licence |
+
+### The committed sample, and the two controls
+
+```
+python realdata.py run --set sample --raster-stride 1
+```
+
+```
+  sample   30 files                                     max_vertices default
+  answered             30  100.0%
+  refused               0    0.0%
+  wall clock         median 48 ms   p95 190 ms   max 0.3 s
+  raster @ 4096 px    30 of 30 certified checked (stride 1): 29 agree, 1 disagree
+    ~ bootstrap__send-arrow-down.svg           raster 6 vs arrangement 4
+  round-6 control    30 of 30 certified checked (stride 1): 23 agree, 7 disagree
+```
+
+Both controls come from `bench.py` and neither is truth. `skimage.euler_number` on ink at
+4096 px is a different library reading a different representation; the round-to-six-decimals
+snap plus a union-find is the arm §1 labels `STRAWMAN`.
+
+**The seven round-6 disagreements are the row that matters, and they get checked a third
+way.** On every one of the seven the raster sides with the arrangement:
+
+| file | planimeter | round-6 | raster @ 4096 px |
+|---|---|---|---|
+| `feather__clipboard.svg` | 2 | 1 | **2** |
+| `feather__database.svg` | 3 | 2 | **3** |
+| `feather__layout.svg` | 3 | 1 | **3** |
+| `tabler__currency-afghani.svg` | 2 | 1 | **2** |
+| `tabler__quote-open.svg` | 3 | 1 | **3** |
+| `tabler__rotate-3d.svg` | 4 | 3 | **4** |
+| `tabler__tags-chevron-down.svg` | 3 | 2 | **3** |
+
+On real files the strawman's fixed radius moves the integer on **7 of 30**, and the
+independent method agrees with the certified radius every time it is asked. §1 measured that
+same effect against constructed truth; this is the first time it has been measured on files
+this repository did not write. The one raster disagreement runs the other way —
+`bootstrap__send-arrow-down.svg`, raster 6 against arrangement 4, round-6 also 4 — and it is
+the arrangement-faces-versus-rendered-regions seam the convention already names, not a
+counting error.
+
+### 13,681 icon files
+
+```
+python realdata.py run --set icons --raster-stride 500
+```
+
+```
+  icons   13681 files                                   max_vertices default
+  answered           10862   79.4%
+  refused             2819   20.6%
+    EDGES_CROSS            1715   12.5%   geometry
+    VERTEX_NEAR_EDGE        759    5.5%   geometry
+    CURVE_UNSTABLE          311    2.3%   geometry
+    TOO_MANY_VERTICES        33    0.2%   budget
+    NO_GEOMETRY               1    0.0%   geometry
+  wall clock         median 37 ms   p95 224 ms   max 30.5 s
+  raster @ 4096 px    22 of 10862 certified checked (stride 500): 20 agree, 2 disagree
+    ~ wheat.svg                                raster 12 vs arrangement 3
+    ~ whirl.svg                                raster 6 vs arrangement 2
+  round-6 control    22 of 10862 certified checked (stride 500): 20 agree, 2 disagree
+    ~ error-404-off.svg                        round-6 1 vs arrangement 2
+    ~ heart-rate-monitor.svg                   round-6 2 vs arrangement 3
+```
+
+**Four files in five get an integer.** The refusals are almost entirely geometric.
+`EDGES_CROSS` at 12.5% is line work that crosses at a point the file does not contain, which
+is what an icon drawn as overlapping strokes looks like from inside an arrangement. The
+budget refuses **0.2%**: the vertex ceiling is not what stops this set. The two raster
+disagreements are both stroke-thickness cases at 4096 px, the same seam as above, and the
+control's denominator is 22 because it runs on every 500th answered file, not on all 10,862.
+
+### 96 Wikimedia Commons floor plans — the advertised use case, and it does not clear
+
+```
+python realdata.py run --set plans --raster-stride 1
+python realdata.py run --set plans --max-vertices 6000 --raster-stride 1
+```
+
+| | default ceiling (2,000) | `--max-vertices 6000` |
+|---|---|---|
+| answered | **0 of 96, 0.0%** | **1 of 96, 1.0%** |
+| `TOO_MANY_VERTICES` (budget) | 88, 91.7% | 57, 59.4% |
+| `VERTEX_NEAR_EDGE` (geometry) | 4, 4.2% | 22, 22.9% |
+| `EDGES_CROSS` (geometry) | 4, 4.2% | 12, 12.5% |
+| `CURVE_UNSTABLE` (geometry) | 0 | 3, 3.1% |
+| `NO_STABLE_SCALE` (geometry) | 0 | 1, 1.0% |
+| wall clock | median 468 ms, p95 6,668 ms, max 19.0 s | median 1,989 ms, p95 9,693 ms, max 15.5 s |
+
+**Raising the ceiling does not buy answers on this set, it buys coordinates.** Nearly every
+file the higher ceiling admits arrives at a *geometry* refusal instead of a budget one: the
+budget bucket falls from 88 to 57, and of those 31 files, **30** became `VERTEX_NEAR_EDGE`,
+`EDGES_CROSS`, `CURVE_UNSTABLE` or `NO_STABLE_SCALE` and **1** became an answer. Pushed further on a subsample the trend holds —
+four of the nine files with `6,000 < n ≤ 10,000`, at `--max-vertices 25000`, where the budget
+cannot bind:
+
+```
+Zimnyaya_Vishnya_floor_4_plan-cs.svg           n=  6085    34.3s  VERTEX_NEAR_EDGE
+Mariahilf_Church_plan.svg                      n=  6398    18.9s  EDGE_COLLAPSED
+Camber_Castle_plan_with_stages,_labelled.svg   n=  6788    35.5s  VERTEX_NEAR_EDGE
+Plan_of_Castle_Garden_in_Český_Krumlov.svg     n=  8726    68.5s  VERTEX_NEAR_EDGE
+```
+
+Zero of four. **A published floor plan is drawn, not built**: a wall ends near a wall rather
+than on it, and two walls cross where the file records no vertex. Those are the two
+conditions the convention says are refused, so the refusal is the design working — and **the
+answer rate on this corpus is the design's price, printed here rather than left to be
+discovered.** The bands are in the file's own units and they are narrow: 19 vertices inside
+`(0, 1.78e-3)` on one Beylerbeyi Palace plan, 190 inside `(0, 1.21e-4)` on the BNF site plan,
+23 inside `(0, 4.25e-7)` on `Plan_abbaye_corvey.svg`. These are near misses, not draughting
+at a visible scale.
+
+**The one file that certifies.** `Akori_church_plan.svg`, at `--max-vertices 3000`:
+`pieces 13, faces 13, chi 0`, radius `7.03e-08`, window `[4.945e-10, 9.998e-06)`, ratio
+20,218. Both controls agree with it. It has 1,295 vertices — under the default ceiling all
+along — and was refused before this commit because the `2N` stability pass crossed the
+ceiling and that budget refusal was reported as `CURVE_UNSTABLE`.
+
+### Why the ceiling binds: cost measured on real geometry
+
+The plans are far larger than the synthetic stratum. Distinct endpoints per file, at the
+0/10/25/50/75/90/100th percentile: **105 / 1,169 / 2,273 / 6,398 / 22,044 / 69,042 /
+359,723.** The median plan is three times the default ceiling and the largest is 180 times
+it. Wall clock for the two quadratic passes, on the real files themselves:
+
+| file | vertices | segments | `emst` | vertex-edge spectrum |
+|---|---|---|---|---|
+| `Floor_plans_of_Buda_Castle_he.svg` | 105 | 106 | 0.00 s | 0.00 s |
+| `Pinxton_Castle_schematic_plan.svg` | 1,108 | 1,292 | 0.02 s | 0.07 s |
+| `Cathedral_schematic_plan_pt_vectorial.svg` | 2,273 | 2,188 | 0.05 s | 0.26 s |
+| `Kaaba-plan_bn.svg` | 4,835 | 4,751 | 0.17 s | 1.16 s |
+| `Camber_Castle_plan,_labelled.svg` | 6,776 | 6,758 | 0.42 s | 3.16 s |
+| `Nijo_Castle_plan.svg` | 11,506 | 11,497 | 1.32 s | 8.52 s |
+| `Plan_du_site_Richelieu-Louvois…svg` | 22,261 | 22,352 | 4.50 s | 40.01 s |
+
+The spectrum, not the spanning tree, is what costs: it is the `(vertex, edge)` quantifier the
+certificate is defined over, and §5's exponent is the same finding on constructed grids. A
+file with curves pays it twice, at `N` and again at about `2N` vertices, so the **effective
+ceiling for a curved file is roughly half the flag's value** — which is exactly how
+`Akori_church_plan.svg` was lost.
+
+### The guard ordering, and the arm of it that lost
+
+`check_vertex_cap` moved in front of the vertex-edge pass. At the default ceiling **this buys
+nothing that can be distinguished from the machine**, and the arms are printed rather than
+the claim:
+
+```
+A guard first                  median  361 ms   p95 4740 ms   max 12.2 s   total  96.6 s
+B spectrum first               median  449 ms   p95 4654 ms   max 16.1 s   total 111.8 s
+A guard first, repeated        median  443 ms   p95 5563 ms   max 15.4 s   total 122.0 s
+A and B verdicts identical on all 96 files: True
+```
+
+The repeat of arm A is slower than arm B, so the drift is larger than the difference the
+change would claim; at the default ceiling the pair budget was already capping the wasted
+pass. The ordering earns its four lines only where the ceiling is raised — same file, same
+three arms, at `--max-vertices 20000`, where 4.97e8 pairs sit under the implied 1.6e9 pair
+budget:
+
+```
+A guard first             0.7 s   TOO_MANY_VERTICES
+B spectrum first         41.1 s   TOO_MANY_VERTICES
+A repeated                0.8 s   TOO_MANY_VERTICES
+```
+
+### The relabel, measured against the function it replaced
+
+Same process, the same 96 plans, the pre-commit `read.stable` restored as a second arm:
+
+```
+committed              TOO_MANY_VERTICES 88, VERTEX_NEAR_EDGE 4, EDGES_CROSS 4
+pre-commit stable()    TOO_MANY_VERTICES 77, CURVE_UNSTABLE 11, VERTEX_NEAR_EDGE 4, EDGES_CROSS 4
+```
+
+Eleven files were told *the curve is ambiguous, go re-observe it* when what happened is that
+the machine ran out of room on a pass carrying twice the vertices. The eight geometry
+refusals are untouched, which is what the control is for.
+
+### What the reader met, and what it dropped
+
+`0 of 96` plans were unreadable. **One** — `Plan_abbaye_corvey.svg` — parses only after a
+`<path>` carrying no `d` is dropped: `svgelements 1.9.6` raises
+`TypeError: object of type NoneType has no len()` inside its own parser on it. Such an
+element has no geometry by the SVG grammar, so dropping it invents nothing, and it is counted
+as `path-without-d` on the verdict rather than dropped silently. What else was skipped across
+the 96, by tag: `image` 13,160 in 4 files, `tspan` 1,758 in 55, `text` 1,409 in 61, and RDF /
+Inkscape metadata in roughly 60 files each. Every one of those is on the `skipped` record of
+the verdict that reports it.
+
+### What real input did **not** answer
+
+- **No file here has a ground truth.** `corpus/found/` is still empty and G5's specification —
+  thirty real files with truth established by a second method *before* planimeter runs — is
+  still unmet. What is measured above is a refusal histogram and two method-agreement rates,
+  and neither of those becomes an accuracy number.
+- **None of these files was written by an agent.** They were drawn by people with Inkscape and
+  emitted by icon build tools. G1, and the agent-written half of G5, have not moved.
+- **The `sample` set is 30 files, committed for reproducibility rather than for power.** Its
+  100% answer rate is the icon set's 79.4% restricted to small files, and it should be read
+  that way.
+- **Refusal rates are per corpus and per ceiling, and they do not compose.** The 20.6% on
+  icons, the 99.0% on plans at `--max-vertices 6000` and the 5–10 of 88 per jitter level in §2
+  are three different questions. None of them is *the* refusal rate.
+
+---
+
+## 12. Limits
 
 One machine, one operating system, one Python. The jitter stratum is synthetic and its
 truth comes from construction recipes, so it measures the arrangement layer and says
-nothing about real agent-written files — that is G5 and G6, and they have not run. The
+nothing about real agent-written files. §11 measures real files, and none of them has a
+ground truth or was written by an agent, so it reports refusal rates and method agreement
+and never an accuracy — G5's specified corpus and G1 have still not run. §11's `icons` and
+`plans` sets are 61 MB and are not committed; the fetch recipe is pinned by exact version
+and by fixed search terms, but Wikimedia Commons search results can move, so the `plans`
+set is reproducible in method and not guaranteed identical in membership. The
 strawman baseline is not the baseline that decides whether there is a product; G1 has not
 run. `RHO`, `CAND_MAX` and `FLOOR_ULPS` are three constants this package chose, and while
 they are scale-free, printed on every answer and movable by flag, choosing them is still

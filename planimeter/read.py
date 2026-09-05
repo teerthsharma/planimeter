@@ -148,11 +148,13 @@ def segments(source: Any, *, flatten: int = FLATTEN) -> Segments:
     except PlanimeterParseError:                                 # pragma: no cover
         raise
     except Exception as exc:
-        # Measured on real files, not anticipated: 2 of 96 Wikimedia Commons
-        # floor plans carry an Inkscape <path> with no `d`, and svgelements
-        # raises TypeError inside its own parser on it. An element with no `d`
-        # has no geometry by the SVG grammar, so dropping it invents nothing -
-        # but it is reported as `path-without-d`, never dropped silently.
+        # Measured on real files, not anticipated: 1 of 96 Wikimedia Commons
+        # floor plans - Plan_abbaye_corvey.svg - carries an Inkscape <path>
+        # with no `d`, and svgelements 1.9.6 raises `TypeError: object of type
+        # NoneType has no len()` inside its own parser on it. An element with
+        # no `d` has no geometry by the SVG grammar, so dropping it invents
+        # nothing - but it is reported as `path-without-d`, never dropped
+        # silently, and the fallback only ever runs after a parse has failed.
         text2, n_empty_paths = _drop_empty_paths(text)
         if not n_empty_paths:
             raise PlanimeterParseError("%s: %s: %s" % (name, type(exc).__name__, exc))

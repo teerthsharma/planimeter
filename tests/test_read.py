@@ -63,6 +63,19 @@ def test_a_shape_that_carried_no_segment_is_named_by_its_tag():
     assert len(s) == 0 and s.n_degenerate == 1 and s.skipped == {"line": 1}
 
 
+def test_a_path_with_no_d_is_dropped_and_counted_rather_than_killing_the_read():
+    """svgelements 1.9.6 raises TypeError inside its own parser on a <path>
+    carrying no `d`. Found on Plan_abbaye_corvey.svg, 1 of 96 Wikimedia Commons
+    plans. Such an element has no geometry by the SVG grammar, so dropping it
+    invents nothing - but it is counted, and the fallback only runs after a
+    parse has already failed, so a file svgelements can read is never rewritten."""
+    text = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">'
+            '<line x1="0" y1="0" x2="5" y2="0"/><path id="empty"/></svg>')
+    s = segments(text)
+    assert len(s) == 1                       # the line survived
+    assert s.skipped["path-without-d"] == 1  # and the drop is on the record
+
+
 def test_no_geometry_names_what_was_skipped():
     s = segments('<svg xmlns="http://www.w3.org/2000/svg">'
                  '<text x="0" y="0">a</text><text x="0" y="9">b</text></svg>')

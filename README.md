@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/teerthsharma/planimeter/blob/main/RESULTS.md"><img src="https://img.shields.io/badge/tests-474%20passed-2ea043?style=flat-square" alt="474 tests passed"></a>
+  <a href="https://github.com/teerthsharma/planimeter/blob/main/RESULTS.md"><img src="https://img.shields.io/badge/tests-479%20passed-2ea043?style=flat-square" alt="479 tests passed"></a>
   <a href="https://github.com/teerthsharma/planimeter/blob/main/RESULTS.md#1-g2--wrong-integers-on-the-jitter-stratum"><img src="https://img.shields.io/badge/wrong%20integers-0%20of%20528-0b7285?style=flat-square" alt="0 wrong integers in 528 draws"></a>
   <a href="https://github.com/teerthsharma/planimeter/blob/main/pyproject.toml"><img src="https://img.shields.io/badge/runtime%20deps-numpy%20%C2%B7%20svgelements-013243?style=flat-square" alt="numpy and svgelements only"></a>
   <img src="https://img.shields.io/badge/counting%20path-no%20GEOS%2C%20no%20raster-8b5cf6?style=flat-square" alt="no GEOS, no raster">
@@ -287,13 +287,45 @@ floor, inside the machine's own spread**: across eleven runs the silent path mea
 blew the gate and were printed as `KILLS`. The threshold has not been moved and every run
 is reported, because a gate that is re-rolled until it passes is not a gate.
 
+**Real input**, files this repository did not write, fetched by a pinned recipe rather than
+picked one at a time. **No file in either set has a ground truth**, so these are refusal
+rates and method-agreement rates, never accuracy
+([RESULTS.md §11](https://github.com/teerthsharma/planimeter/blob/main/RESULTS.md#11-real-input--files-this-repository-did-not-write)):
+
+```
+    13,681 npm icon files (tabler, feather, bootstrap, MIT, pinned versions)
+        answered   10,862   79.4%       median 37 ms
+        refused     2,819   20.6%       EDGES_CROSS 12.5%  VERTEX_NEAR_EDGE 5.5%
+                                        CURVE_UNSTABLE 2.3%  budget 0.2%
+
+    96 Wikimedia Commons floor plans — the advertised use case
+        answered        0    0.0%       at the default vertex ceiling
+        answered        1    1.0%       at --max-vertices 6000
+        refused        95   99.0%       budget 59.4%  VERTEX_NEAR_EDGE 22.9%
+                                        EDGES_CROSS 12.5%
+```
+
+🧾 **Four icon files in five get an integer; one floor plan in ninety-six does.** A published
+floor plan is drawn, not built — a wall ends *near* a wall instead of on it, two walls cross
+where the file records no vertex — and those are precisely the two conditions this tool
+refuses. **Raising the ceiling does not buy answers on that set, it buys coordinates**: of the 31
+files the higher ceiling admits, 30 turn into a named geometry refusal and 1 into an answer. On a
+subsample where the budget cannot bind at all, `--max-vertices 25000`, it is 0 of 4.
+
+🔬 **The one control on real input that can be adjudicated.** On the 30 committed sample
+files the round-6 strawman returns a different integer on **7 of 30**, and on all seven
+`skimage.euler_number` at 4096 px sides with the certified radius. The raster disagrees with
+the arrangement on 1 of 30, and that one is the rendered-regions seam, not a count.
+
 ### Reproduce all of it
 
 ```bash
 python -m venv .venv && . .venv/*/activate    # .venv\Scripts\activate on Windows
 pip install -e ".[test]"
-pytest -q                                     # 474 passed
-python bench.py                               # every table above, ~60 s
+pytest -q                                     # 479 passed
+python bench.py                               # sections 1-10, ~60 s
+python realdata.py run --set sample           # section 11, on the 30 committed files
+python realdata.py fetch && python realdata.py run   # 61 MB, not committed
 python -m planimeter --demo
 ```
 
@@ -344,10 +376,12 @@ what to re-observe, and a bench with controls.
   committed before any number existed: exponent above `1.3`, or above `50 ms` at 100,000
   vertices, and the sentence dies. Measured exponent **`1.825`**, extrapolating to
   **`740,531 ms`**. Both blown by orders of magnitude. The comfortable range is under roughly
-  **600 segments** — 43 ms at 544, 1.9 s at 3,784 — and above `BRUTE_MAX` it refuses
-  `TOO_MANY_VERTICES` rather than stalling a turn. A k-d tree does not fix this: the
-  certificate's precondition quantifies over *every* (vertex, edge) pair, and a
-  nearest-neighbour structure answers a different question.
+  **600 segments** — 43 ms at 544, 1.9 s at 3,784 — and above the vertex ceiling it refuses
+  `TOO_MANY_VERTICES` rather than stalling a turn. That ceiling is a **default, not a limit
+  of the method**: `--max-vertices` spends past it and the pair budget follows it, measured
+  on real plans at 0.26 s for the incidence pass at 2,273 vertices and 40.0 s at 22,261. A
+  k-d tree does not fix this: the certificate's precondition quantifies over *every*
+  (vertex, edge) pair, and a nearest-neighbour structure answers a different question.
 - 🪦 **There is no refusal cliff.** The design predicted a level where everything certifies
   and a level two steps later where everything refuses. Refusals sit between **3 and 10 of
   88 at every level**, including the smallest, and do not order monotonically with the
@@ -377,10 +411,22 @@ what to re-observe, and a bench with controls.
   published.** That has not been collected. If its median clears the stratum, the accuracy
   headline dies and what remains is the printed scale and the hook slot — and that outcome
   gets published here, not hidden.
-- 📉 **No real agent-written file has been measured.** `corpus/found/` is empty. Whether real
-  files are jittery enough for vertex identity to be contested, and whether
-  `VERTEX_NEAR_EDGE` refuses most of them — which would make this a linter for unnoded
-  geometry — is **unknown**.
+- 🪦 **It is a linter for unnoded geometry, and that is now measured rather than feared.**
+  The question this section used to leave open — are real files jittery enough for vertex
+  identity to be contested — has an answer on 13,777 real files: **20.6% of icon files and
+  99.0% of Commons floor plans refuse**, and once the vertex ceiling stops binding the
+  refusals are almost entirely `EDGES_CROSS` and `VERTEX_NEAR_EDGE`. On the advertised use
+  case, floor plans, the answer rate is **1 of 96**. That is the design's price and it is
+  printed at the top of the benchmark section, not in a footnote.
+- 📉 **No agent-written file has been measured.** `corpus/found/` is still empty. The real
+  corpus above was drawn by people in Inkscape and emitted by icon build tools, and **none
+  of it carries a ground truth**, so it produces refusal histograms and method agreement,
+  never an accuracy number.
+- 🪦 **A refusal the tool could not have made was being made.** A budget refusal on the `2N`
+  curve-stability pass was reported as `CURVE_UNSTABLE` — *go re-observe the drawing* — when
+  what happened is that the machine ran out of room on a pass carrying twice the vertices.
+  It hit 11 of 96 real plans, and one of them, at 1,295 vertices, was under the ceiling all
+  along and certifies.
 - 📉 **The vision comparison was cut, not repaired.** It scored perfectly only because it
   read exact coordinate text rather than a render. Re-running it against a raster is a
   different experiment than the one that was reported.
@@ -393,7 +439,14 @@ Collected once, here.
 
 - **One machine, one OS, one Python.** Windows 11, 3.11.9, numpy 2.4.6.
 - **The jitter stratum is synthetic.** Its truth comes from construction recipes, so it
-  measures the arrangement layer and says nothing about real agent-written files.
+  measures the arrangement layer and says nothing about real files.
+- **The real corpus has no ground truth and no agent-written file in it.** 13,681 npm icons
+  and 96 Commons plans, drawn by people and by build tools. Every number from it is a
+  refusal rate or an agreement rate between two methods. **Refusal rates do not compose**:
+  20.6% on icons, 99.0% on plans at one ceiling, and 5–10 of 88 per synthetic jitter level
+  are three different questions.
+- **`corpus/real/sample/` is 30 files, committed so the numbers can be re-run without a
+  download.** Its 100% answer rate is the icon set restricted to small files, not a headline.
 - **`rho`, `CAND_MAX` and `FLOOR_ULPS` are three constants this package chose**, in a tool
   whose pitch is that it refuses to invent numbers. They are scale-free, printed on every
   answer, movable by flag, and `rho` gets a published sensitivity table. That is strictly
@@ -418,7 +471,8 @@ Collected once, here.
 ## 🗺️ Roadmap
 
 - 🎯 **Sample the real baseline (G1).** Twenty unprompted first-attempt agent scripts against the closed-form corpus, whole distribution published, classified by which library each reached for. This is the gate that decides whether the accuracy headline lives.
-- 📂 **The found corpus (G5, G6).** ~30 real agent-written SVGs with truth established by a second method *before* planimeter runs on them. Refusal histogram by reason code ships first, before any usefulness claim.
+- 📂 **The found corpus (G5, G6).** The refusal histogram now exists for 13,777 real files with no truth ([§11](https://github.com/teerthsharma/planimeter/blob/main/RESULTS.md#11-real-input--files-this-repository-did-not-write)). What is still missing is the specified corpus: ~30 real **agent-written** SVGs with truth established by a second method *before* planimeter runs on them.
+- ⚡ **The incidence pass is what puts floor plans in scope, and §11 says by how much.** The median Commons plan carries 6,398 endpoints against a 2,000 default; `--max-vertices` reaches them at 40 s a file. A sweep line is the fix, and the all-pairs pass stays as its test control.
 - ⚡ **A sweep line for the incidence pass.** The `1.825` exponent is the all-pairs (vertex, edge) quantifier. Fixing it is what puts real floor plans back in scope.
 - 🗺️ **More readers** — GeoJSON, WKT, DXF — shipped when the found corpus contains that format, and not before.
 - 🔌 **MCP.** `gis-mcp` owns that surface with 92+ tools; the hook is the difference. Ask if you want one.
@@ -436,6 +490,7 @@ c.t_below, c.t_above, c.ratio, c.radius     # the certificate
 c.grid_source                               # "derived" | "user"
 c.json()                                    # the machine shape
 
+planimeter.chi("plan.svg", max_vertices=6000)   # spend past the default vertex ceiling
 planimeter.chi_segments(seg)                # from an (m, 2, 2) float64 array — no parser
 planimeter.segments("walls.svg")            # the escape hatch: array + ids + skipped
 planimeter.check("walls.svg", faces=5)      # HELD | BROKEN | REFUSED

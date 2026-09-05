@@ -22,11 +22,15 @@ documentation commit that follows moves `HEAD` without moving a number.
 ```
 python -m venv .venv
 .venv/Scripts/pip install -e ".[test]"
-.venv/Scripts/python -m pytest -q         # 479 passed
+.venv/Scripts/python -m pytest -q         # 500 passed at 6d63c43
 .venv/Scripts/python bench.py             # sections 1-8, 61.3 s
 .venv/Scripts/python realdata.py fetch    # 61 MB, not committed; section 11
 .venv/Scripts/python realdata.py run      # section 11
 ```
+
+The suite was 479 at `4730829`, the commit that recorded section 11, and is **500 at `6d63c43`**.
+The difference is `2db2d8c`, which added ten crash-path tests that collect as twenty-one under
+parametrisation. No test was removed and no number in sections 1 through 11 moved.
 
 Sections 1 through 10 are `bench.py`; section 11 is `realdata.py` and runs on files this
 repository did not write. `bench.py` is the run of record for the first ten and stamps its

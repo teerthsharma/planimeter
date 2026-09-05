@@ -149,6 +149,64 @@ def test_no_file_is_bad_input(capsys):
     assert cli.main([]) == 3
 
 
+@needs_reader
+@pytest.mark.parametrize("bad_flatten", ["0", "-5", "2000000"])
+def test_a_bad_flatten_flag_is_bad_input_not_a_traceback(bad_flatten, capsys):
+    """`--flatten` is a plain int on argparse's side; a stranger's 0, a negative
+    count, or a stray extra zero used to raise a bare ValueError out of `main`
+    (exit 1, a Python traceback on stderr) instead of the documented ladder."""
+    assert cli.main(["--demo", "--flatten", bad_flatten]) == 3
+    assert "BAD INPUT" in capsys.readouterr().err
+
+
+@needs_reader
+def test_a_non_finite_grid_flag_is_bad_input_not_a_traceback(capsys):
+    """argparse's `type=float` accepts "nan" with no complaint; it used to reach
+    a bare IndexError three frames inside snap.window_from_grid."""
+    assert cli.main(["--demo", "--grid", "nan"]) == 3
+    assert "BAD INPUT" in capsys.readouterr().err
+
+
+@needs_reader
+def test_missing_corrupt_and_zero_length_files_all_exit_bad_input(tmp_path, capsys):
+    """Every way a stranger's file can fail to be readable geometry - not there,
+    zero bytes, or binary garbage under a .svg name - exits 3 with a printed
+    reason, never a bare traceback."""
+    missing = tmp_path / "nope.svg"
+    empty = tmp_path / "empty.svg"
+    empty.write_bytes(b"")
+    corrupt = tmp_path / "corrupt.svg"
+    corrupt.write_bytes(bytes(range(256)))
+    directory = tmp_path / "a_directory.svg"
+    directory.mkdir()
+
+    for path in (missing, empty, corrupt, directory):
+        assert cli.main([str(path)]) == 3
+        assert "BAD INPUT" in capsys.readouterr().err
+
+
+@needs_reader
+def test_a_unicode_named_file_still_prints_on_a_console_that_cannot_encode_it(tmp_path):
+    """A committed file's name can be any Unicode; the console printing the
+    verdict might be a Windows cp1252 terminal. `_safe_write` must fall back to
+    replacement characters instead of the run crashing with UnicodeEncodeError
+    on a working answer."""
+    import io
+    p = tmp_path / "wáll_☃.svg"       # wáll_☃.svg
+    p.write_text('<svg xmlns="http://www.w3.org/2000/svg">'
+                 '<line x1="0" y1="0" x2="10" y2="0"/></svg>', encoding="utf-8")
+    buf = io.BytesIO()
+    narrow_console = io.TextIOWrapper(buf, encoding="cp1252", errors="strict")
+    old_stdout, sys.stdout = sys.stdout, narrow_console
+    try:
+        code = cli.main([str(p)])
+    finally:
+        sys.stdout = old_stdout
+    narrow_console.flush()
+    assert code == 0                            # a lone segment certifies: 1 piece, 0 faces
+    assert b"planimeter" in buf.getvalue()
+
+
 # --------------------------------------------------------------------------
 # init
 # --------------------------------------------------------------------------

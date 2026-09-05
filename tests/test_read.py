@@ -17,8 +17,8 @@ import pytest
 import corpus
 import planimeter
 from planimeter.arrange import chi_segments
-from planimeter.read import (FLATTEN, SUFFIXES, Segments, bad_input, segments,
-                             stable)
+from planimeter.read import (FLATTEN, FLATTEN_MAX, SUFFIXES, Segments, bad_input,
+                             segments, stable)
 from planimeter.result import KIND, REASON, Chi, PlanimeterParseError, Refused
 
 SVG = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">\n'
@@ -253,9 +253,21 @@ def test_bad_input_becomes_a_refusal_the_cli_can_print():
         int(r)
 
 
-def test_flatten_must_be_a_real_refinement():
-    with pytest.raises(ValueError):
-        segments(SVG, flatten=0)
+@pytest.mark.parametrize("bad", [0, -1, -1000])
+def test_flatten_must_be_a_real_refinement(bad):
+    with pytest.raises(PlanimeterParseError):
+        segments(SVG, flatten=bad)
+
+
+def test_flatten_above_the_ceiling_refuses_instead_of_hanging():
+    """flatten=2_000_000 on a curve used to run the pure-Python point sampler
+    2M times per pass, twice (N and 2N) - a multi-minute hang, not a refusal,
+    for a single stray CLI argument. It must fail fast and by type instead."""
+    with pytest.raises(PlanimeterParseError, match="between 1 and"):
+        segments(SVG, flatten=2_000_000)
+    with pytest.raises(PlanimeterParseError):
+        segments(SVG, flatten=FLATTEN_MAX + 1)
+    segments(SVG, flatten=FLATTEN_MAX)      # the ceiling itself is not refused
 
 
 def test_the_reader_record_duck_types_into_the_arrangement():

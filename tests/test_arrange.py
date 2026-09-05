@@ -14,7 +14,7 @@ import pytest
 
 from figures import FAMILIES, REFUSAL_FIGURES, S, split_shared_vertices, square
 from planimeter.arrange import chi_segments, vertex_edge_spectrum
-from planimeter.result import BANNED, REASON, Chi, Refused
+from planimeter.result import BANNED, REASON, Chi, PlanimeterParseError, Refused
 
 NAMES = sorted(FAMILIES)
 FEATURE_GAP = 10.0                       # every family's smallest deliberate feature
@@ -201,6 +201,37 @@ def test_no_geometry_names_what_was_skipped():
     assert r.kind == "geometry"
 
 
+@pytest.mark.parametrize("bad,match", [
+    (np.zeros((5, 2)), "shape"),                        # missing the endpoint axis
+    (np.zeros((5, 4)), "shape"),                        # 4 numbers, not 2 points
+    (np.zeros((5, 2, 3)), "shape"),                     # 3 numbers per point, not 2
+    ([["a", "b"], ["c", "d"]], "float64"),              # wrong dtype: not numeric at all
+    ({"not": "a segment array"}, "float64"),            # not array-like at all
+])
+def test_a_malformed_segment_array_is_this_packages_own_typed_error(bad, match):
+    """A caller of the array API - not the CLI, which only ever hands `chi_segments`
+    a reader's own validated Segments - can pass anything. The wrong shape or a
+    non-numeric dtype must come back as `PlanimeterParseError`, never a bare
+    numpy `ValueError` two frames down inside `np.asarray`."""
+    with pytest.raises(PlanimeterParseError, match=match):
+        chi_segments(bad)
+
+
+@pytest.mark.parametrize("bad_value", [float("nan"), float("inf"), float("-inf")])
+def test_non_finite_coordinates_are_refused_by_type_not_by_warning(bad_value):
+    """NaN/Inf used to reach the vertex-edge distance math unfiltered, printing a
+    numpy RuntimeWarning and returning a confusing NO_STABLE_SCALE ("0
+    separations"). It must instead be this package's own typed, actionable
+    error, and it must not print anything to warn about."""
+    import warnings
+    seg = np.array([[[0.0, 0.0], [bad_value, 1.0]]])
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        with pytest.raises(PlanimeterParseError, match="finite"):
+            chi_segments(seg)
+    assert not caught, "non-finite input must not raise a numpy warning: %r" % caught
+
+
 def test_edge_collapsed_is_reachable_and_falls_through():
     """A user radius above a real segment's length swallows it. The refusal
     names the element and its length."""
@@ -215,6 +246,22 @@ def test_margin_too_small_is_reachable():
     r = chi_segments(seg)
     assert isinstance(r, Refused)
     assert r.reason in (REASON.MARGIN_TOO_SMALL, REASON.NO_STABLE_SCALE)
+
+
+def test_a_finite_but_extreme_coordinate_refuses_quietly():
+    """1e308 squared overflows float64 inside an intermediate squared-length,
+    so a legitimately finite coordinate near the top of float64's range used to
+    print a numpy RuntimeWarning on its way to a refusal. The refusal is fine -
+    this drawing's own scale is unusable - the warning was noise from computing
+    it, and chi_segments now silences that noise rather than passing it through
+    to the caller's stderr."""
+    import warnings
+    seg = S([[0.0, 0.0], [1e308, 1e308]], [[0.0, 0.0], [10.0, 0.0]])
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        r = chi_segments(seg)
+    assert isinstance(r, Refused)
+    assert not caught, "an extreme-but-finite coordinate must not warn: %r" % caught
 
 
 def test_too_many_vertices_is_a_budget_refusal_not_a_geometry_one():

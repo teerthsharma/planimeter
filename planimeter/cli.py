@@ -53,13 +53,29 @@ CLAUDE_MD_BLOCK = (
 # printing
 # --------------------------------------------------------------------------
 
+def _safe_write(stream, text: str) -> None:
+    """Write text to a console that may not be able to encode it.
+
+    A source file's path, element ids and detail strings are copied verbatim
+    from whatever a stranger's file or filesystem contains, so `text` can carry
+    any Unicode. The stream this is printed to is not under this package's
+    control - a default Windows console is commonly cp1252, not UTF-8 - and a
+    verdict must still print rather than crash the run reporting it.
+    """
+    try:
+        stream.write(text)
+    except UnicodeEncodeError:
+        enc = getattr(stream, "encoding", None) or "ascii"
+        stream.write(text.encode(enc, errors="replace").decode(enc, errors="replace"))
+
+
 def emit(result, as_json: bool, stream=None) -> int:
     """Print one verdict and return its exit code."""
     out = stream or sys.stdout
     if as_json:
-        out.write(_json.dumps(result.json(), sort_keys=True) + "\n")
+        _safe_write(out, _json.dumps(result.json(), sort_keys=True) + "\n")
     else:
-        out.write(result.block() + "\n")
+        _safe_write(out, result.block() + "\n")
     status = getattr(result, "verdict", None) or getattr(result, "status", STATUS.REFUSED)
     return EXIT.get(status, EXIT[STATUS.REFUSED])
 
@@ -67,7 +83,7 @@ def emit(result, as_json: bool, stream=None) -> int:
 def _bad(msg: str, stream=None) -> int:
     r = Refused(REASON.BAD_INPUT, detail=msg,
                 action="the tool never ran; nothing is claimed about this file")
-    (stream or sys.stderr).write(r.block() + "\n")
+    _safe_write(stream or sys.stderr, r.block() + "\n")
     return EXIT[STATUS.BAD_INPUT]
 
 
@@ -212,7 +228,7 @@ def _confirm(a) -> bool:
     if getattr(a, "yes", False):
         return True
     if not sys.stdin.isatty():
-        sys.stdout.write("  not a terminal; nothing written. Re-run with --yes.\n")
+        _safe_write(sys.stdout, "  not a terminal; nothing written. Re-run with --yes.\n")
         return False
     try:
         answer = input("  write these changes? [y/N] ")
@@ -220,7 +236,7 @@ def _confirm(a) -> bool:
         # isatty() is True and stdin is still unreadable - a closed handle under
         # a task runner, or Ctrl-C at the prompt. Declining is the answer; a
         # traceback out of `init` is not.
-        sys.stdout.write("\n  no answer read; nothing written. Re-run with --yes.\n")
+        _safe_write(sys.stdout, "\n  no answer read; nothing written. Re-run with --yes.\n")
         return False
     return answer.strip().lower() in ("y", "yes")
 
@@ -235,9 +251,9 @@ def init_check(a) -> int:
         with open(p) as fh:
             found = HOOK_ARGS in fh.read()
     except OSError as exc:
-        sys.stdout.write("  settings   %s  MISSING (%s)\n" % (p, exc.strerror))
+        _safe_write(sys.stdout, "  settings   %s  MISSING (%s)\n" % (p, exc.strerror))
         return EXIT[STATUS.REFUSED]
-    sys.stdout.write("  settings   %s  %s\n" % (p, "hook present" if found else "NO HOOK ENTRY"))
+    _safe_write(sys.stdout, "  settings   %s  %s\n" % (p, "hook present" if found else "NO HOOK ENTRY"))
 
     d = tempfile.mkdtemp(prefix="planimeter-check-")
     svg = os.path.join(d, "demo.svg")
@@ -251,7 +267,7 @@ def init_check(a) -> int:
         stamp = _json.loads(r.stdout)["hookSpecificOutput"]["additionalContext"]
     except Exception:
         pass
-    sys.stdout.write("  hook       exit %d  %s\n"
+    _safe_write(sys.stdout, "  hook       exit %d  %s\n"
                      % (r.returncode, stamp or "(no stamp - see PLANIMETER_HOOK_DEBUG=1)"))
     ok = found and r.returncode == 0 and stamp
     return EXIT[STATUS.CERTIFIED] if ok else EXIT[STATUS.REFUSED]
@@ -281,10 +297,10 @@ def cmd_init(a) -> int:
     changes = [(p, before, after), (md, md_before, md_after)]
     changes = [(n, b, c) for n, b, c in changes if b != c]
     if not changes:
-        sys.stdout.write("  already installed; nothing to write.\n  %s\n" % hook_command())
+        _safe_write(sys.stdout, "  already installed; nothing to write.\n  %s\n" % hook_command())
         return EXIT[STATUS.CERTIFIED]
     for name, b, c in changes:
-        sys.stdout.write(_diff(b, c, name) or "  + %s\n" % name)
+        _safe_write(sys.stdout, _diff(b, c, name) or "  + %s\n" % name)
     if not _confirm(a):
         return EXIT[STATUS.REFUSED]
     for name, _b, c in changes:
@@ -293,7 +309,7 @@ def cmd_init(a) -> int:
             os.makedirs(d, exist_ok=True)
         with open(name, "w") as fh:
             fh.write(c)
-        sys.stdout.write("  wrote %s\n" % name)
+        _safe_write(sys.stdout, "  wrote %s\n" % name)
     return EXIT[STATUS.CERTIFIED]
 
 
@@ -314,10 +330,10 @@ def main(argv=None) -> int:
     a = build_parser().parse_args(argv)
     if a.version:
         from . import __version__
-        sys.stdout.write("planimeter %s\n" % __version__)
+        _safe_write(sys.stdout, "planimeter %s\n" % __version__)
         return 0
     if a.convention:
-        sys.stdout.write(CONVENTION + "\n")
+        _safe_write(sys.stdout, CONVENTION + "\n")
         return 0
     if not a.file and not a.demo:
         build_parser().print_help(sys.stderr)

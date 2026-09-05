@@ -50,7 +50,7 @@ import numpy as np
 
 from . import snap as _snap
 from .count import count
-from .result import PRINT_CAP, REASON, Chi, Refused, digest
+from .result import PRINT_CAP, REASON, Chi, PlanimeterParseError, Refused, digest
 from .snap import (CAND_MAX, RHO, Window, candidates, dedup_exact, margin,
                    window_from_grid)
 
@@ -239,11 +239,21 @@ def _as_segments(obj) -> Tuple[np.ndarray, List[str], Dict[str, int], str, str, 
                 break
         if arr is None:
             arr = obj
-    seg = np.asarray(arr, dtype=np.float64)
+    try:
+        seg = np.asarray(arr, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise PlanimeterParseError(
+            "segments must be numeric and convertible to float64: %s" % exc)
     if seg.size == 0:
         seg = seg.reshape(0, 2, 2)
     if seg.ndim != 3 or seg.shape[1:] != (2, 2):
-        raise ValueError("segments must have shape (m, 2, 2); got %r" % (seg.shape,))
+        raise PlanimeterParseError(
+            "segments must have shape (m, 2, 2); got %r" % (seg.shape,))
+    if not np.all(np.isfinite(seg)):
+        n_bad = int(np.count_nonzero(~np.isfinite(seg)))
+        raise PlanimeterParseError(
+            "segments contain %d non-finite value(s) (NaN or Inf) across their "
+            "coordinates; every x and y must be a finite float" % n_bad)
     ids = list(getattr(obj, "ids", None) or ["seg#%d" % i for i in range(len(seg))])
     if len(ids) != len(seg):
         ids = ["seg#%d" % i for i in range(len(seg))]
@@ -267,6 +277,19 @@ def chi_segments(seg, *, grid: Optional[float] = None, rho: Optional[float] = No
     coupled to a file format and the claim "given a correct segment set the
     integers are exact" is testable with no parser in the room.
     """
+    with np.errstate(invalid="ignore", over="ignore", divide="ignore"):
+        return _chi_segments(seg, grid=grid, rho=rho, cand_max=cand_max, flatten=flatten,
+                             ids=ids, source=source, max_vertices=max_vertices)
+
+
+def _chi_segments(seg, *, grid, rho, cand_max, flatten, ids, source, max_vertices):
+    # `_as_segments` has already refused non-finite input; a coordinate near
+    # float64's own range can still overflow to +/-inf inside an intermediate
+    # squared-length or cross product below (a segment near 1e308, say). That
+    # is arithmetic noise, not new information - a downstream refusal
+    # (MARGIN_TOO_SMALL or EDGE_COLLAPSED) already says the drawing's scale is
+    # unusable - so `chi_segments` silences it above rather than letting a
+    # RuntimeWarning print on every such run.
     arr, auto_ids, skipped, src, fmt, flat = _as_segments(seg)
     if ids is not None:
         ids = list(ids)

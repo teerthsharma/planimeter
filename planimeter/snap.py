@@ -56,7 +56,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 
 from .count import DSU
-from .result import REASON, Refused
+from .result import REASON, PlanimeterParseError, Refused
 
 # ---------------------------------------------------------------------------
 # Policy constants. Every one is a number this package chose, printed on every
@@ -369,6 +369,14 @@ def window_from_grid(pts: np.ndarray, radius: float, *, rho: float = RHO,
     inside a window with ratio >= rho and passes the arrangement preconditions
     is exactly as verified as a derived one, and grid_source says which it was.
     """
+    radius = float(radius)
+    if not math.isfinite(radius):
+        # NaN compares False against both bounds below, falling through to an
+        # unguarded searchsorted index; Inf and -Inf are already handled (Inf
+        # is caught by the "at or above every separation" branch, -Inf by
+        # "below the floor") but are refused here too rather than trusted to
+        # keep landing on the right side of those comparisons.
+        raise PlanimeterParseError("--grid must be a finite number; got %r" % (radius,))
     pts = np.asarray(pts, dtype=np.float64).reshape(-1, 2)
     s, weights, tree = spectrum(pts, extra, max_vertices=max_vertices)
     if radius < s[0]:

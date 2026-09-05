@@ -9,7 +9,9 @@ import math
 
 import numpy as np
 
-from planimeter.result import REASON, Refused
+import pytest
+
+from planimeter.result import REASON, PlanimeterParseError, Refused
 from planimeter.snap import (CLUSTER_MAX, FLOOR_ULPS, Window, candidates,
                              dedup_exact, emst, floor_delta, margin,
                              merge_heights, spectrum, window, window_from_grid)
@@ -204,6 +206,19 @@ def test_user_grid_is_verified_the_same_way():
     assert isinstance(w, Window) and w.source == "user" and w.n_merged == 1
     assert isinstance(window_from_grid(pts, 1e9), Refused)
     assert isinstance(window_from_grid(pts, 1e-300), Refused)
+
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf")])
+def test_a_non_finite_grid_is_this_packages_own_typed_error(bad):
+    """NaN compares False against both the floor and the ceiling check below,
+    falling through to an unguarded `s[k + 1]` and raising a bare IndexError
+    three frames inside `window_from_grid` - reachable directly from the
+    command line as `--grid nan`. Inf and -Inf happened to be caught by the
+    two comparisons that follow, but are refused up front too rather than
+    trusted to keep landing on the right side of them."""
+    pts = np.array([[0.0, 0.0], [1e-4, 0.0], [10.0, 0.0], [10.0, 10.0], [0.0, 10.0]])
+    with pytest.raises(PlanimeterParseError, match="finite"):
+        window_from_grid(pts, bad)
 
 
 def test_rho_is_printed_and_movable():

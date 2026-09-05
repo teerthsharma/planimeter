@@ -47,6 +47,14 @@ SUFFIXES = (".svg",)
 # arrangements and must not collide.
 FLATTEN = 16
 
+# --flatten is a plain int on the command line, so a stranger's typo - 0, a
+# negative count, or a stray extra zero - must refuse in this function, not
+# three frames down as a numpy shape error or, above this ceiling, hang the
+# process: each curve is sampled by a pure-Python loop measured at about
+# 0.25 ms/point, and the run below repeats it at 2N, so an unbounded flatten
+# is an unbounded, uninterruptible wait rather than a refusal.
+FLATTEN_MAX = 5000
+
 # Container and metadata tags: present in the tree, never geometry, never
 # counted as skipped. Anything outside this set that carries no segments is
 # reported by tag, so `NO_GEOMETRY` on a file that visibly has geometry names
@@ -129,9 +137,14 @@ def segments(source: Any, *, flatten: int = FLATTEN) -> Segments:
     Raises `OSError` (the file is not there) or `PlanimeterParseError` (it is
     not SVG). Every geometry outcome is a value, not an exception.
     """
-    n = int(flatten)
-    if n < 1:
-        raise ValueError("flatten must be >= 1; got %r" % (flatten,))
+    try:
+        n = int(flatten)
+    except (TypeError, ValueError) as exc:
+        raise PlanimeterParseError("flatten must be an integer; got %r: %s" % (flatten, exc))
+    if n < 1 or n > FLATTEN_MAX:
+        raise PlanimeterParseError(
+            "flatten must be between 1 and %d (it is doubled and repeated for curve "
+            "stability); got %r" % (FLATTEN_MAX, flatten))
     text, name = _text_and_name(source)
     try:
         import io

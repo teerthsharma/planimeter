@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/teerthsharma/planimeter/main/assets/hero.svg" width="100%" alt="planimeter: a crosswall that misses its floor by 2.2e-6, the two face counts that gap allows, and the typed refusal naming the coordinate">
+  <img src="https://raw.githubusercontent.com/teerthsharma/planimeter/main/assets/hero.svg" width="100%" alt="Akori_church_plan.svg from Wikimedia Commons, its 13 enclosed regions shaded, beside the verdict: CERTIFIED, 13 pieces, 13 faces, chi 0, at snap radius 7.03e-08">
 </p>
 
 <p align="center">
@@ -232,7 +232,7 @@ control, and every arm that lost →
 RESULTS.md](https://github.com/teerthsharma/planimeter/blob/main/RESULTS.md)**
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/teerthsharma/planimeter/main/assets/jitter.svg" width="100%" alt="wrong integers on the jitter stratum: planimeter 0, round-6 snap 350, networkx 350, polygonize_full 336, set_precision 299, oracle control 22">
+  <img src="https://raw.githubusercontent.com/teerthsharma/planimeter/main/assets/control.svg" width="100%" alt="feather__layout.svg counted two ways: planimeter subdivides the four junctions and finds 3 bounded regions, a round-6 snap misses them and finds 1, and the raster control says 3">
 </p>
 
 44 figure families × 6 levels of `sigma/g` in `1e-7..1e-2` × 2 seeds = **528 draws**. Truth
@@ -369,7 +369,7 @@ what to re-observe, and a bench with controls.
 ## 💥 What we got wrong
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/teerthsharma/planimeter/main/assets/cost.svg" width="100%" alt="cost curve: fitted log-log exponent 1.825 against a gate that kills above 1.3">
+  <img src="https://raw.githubusercontent.com/teerthsharma/planimeter/main/assets/refuse.svg" width="100%" alt="Floor_plans_of_Buda_Castle_he.svg refused VERTEX_NEAR_EDGE at (537.5, 54.429915), 7.1e-15 from path#rect5109; of 96 Commons floor plans at the default ceiling, 0 answered">
 </p>
 
 - 🪦 **"Usable as a hook on a real floor plan" is withdrawn, not softened.** The gate was

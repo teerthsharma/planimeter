@@ -101,6 +101,25 @@ def test_bad_input_says_the_tool_never_ran():
     assert "BAD_INPUT" in buf.getvalue() and "never ran" in buf.getvalue()
 
 
+def test_bad_input_does_not_banner_as_a_verdict():
+    """The banner is the status. A missing file used to print REFUSED across the
+    top, which reads as `the geometry was refused` - the one thing that did not
+    happen. Every other refusal still banners REFUSED, and that is asserted here
+    so the fix cannot be over-applied."""
+    bad = Refused(REASON.BAD_INPUT, detail="no such file", source="nosuch.svg")
+    assert bad.status == STATUS.BAD_INPUT and bad.kind == "input"
+    assert "BAD INPUT" in bad.block() and "REFUSED" not in bad.block()
+    assert "REFUSED" in REFUSAL.block()
+
+
+def test_a_bad_input_survives_the_json_round_trip_as_a_refusal():
+    """`verdict_from_json` routed on the status string, so a BAD_INPUT came back
+    as a Chi and raised on the missing count fields."""
+    from planimeter.result import verdict_from_json
+    back = verdict_from_json(Refused(REASON.BAD_INPUT, detail="no such file").json())
+    assert isinstance(back, Refused) and back.status == STATUS.BAD_INPUT
+
+
 # --------------------------------------------------------------------------
 # argument parsing
 # --------------------------------------------------------------------------
@@ -168,6 +187,26 @@ def test_init_writes_nothing_without_confirmation(tmp_path, monkeypatch, capsys)
     assert not (tmp_path / ".claude").exists()
     assert not (tmp_path / "CLAUDE.md").exists()
     assert "+" in capsys.readouterr().out                 # the diff was printed first
+
+
+def test_init_declines_rather_than_tracebacks_when_the_prompt_cannot_be_read(
+        tmp_path, monkeypatch, capsys):
+    """isatty() can be True on a handle that still reads EOF - a task runner, a
+    piped terminal. `init` used to raise EOFError through main and exit 1 with a
+    traceback; the exit ladder has no 1 for a refusal, and a tool that can
+    traceback out of its installer does not get installed twice."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(cli.sys.stdin, "isatty", lambda: True, raising=False)
+    monkeypatch.setattr("builtins.input", _eof)
+    a = cli.build_parser("init").parse_args([])
+    assert cli.cmd_init(a) == EXIT[STATUS.REFUSED]
+    assert not (tmp_path / ".claude").exists()
+    assert not (tmp_path / "CLAUDE.md").exists()
+    assert "nothing written" in capsys.readouterr().out
+
+
+def _eof(*_a, **_k):
+    raise EOFError("EOF when reading a line")
 
 
 def test_init_end_to_end(tmp_path, monkeypatch, capsys):

@@ -67,7 +67,6 @@ def emit(result, as_json: bool, stream=None) -> int:
 def _bad(msg: str, stream=None) -> int:
     r = Refused(REASON.BAD_INPUT, detail=msg,
                 action="the tool never ran; nothing is claimed about this file")
-    r.status = STATUS.BAD_INPUT
     (stream or sys.stderr).write(r.block() + "\n")
     return EXIT[STATUS.BAD_INPUT]
 
@@ -209,7 +208,15 @@ def _confirm(a) -> bool:
     if not sys.stdin.isatty():
         sys.stdout.write("  not a terminal; nothing written. Re-run with --yes.\n")
         return False
-    return input("  write these changes? [y/N] ").strip().lower() in ("y", "yes")
+    try:
+        answer = input("  write these changes? [y/N] ")
+    except (EOFError, KeyboardInterrupt):
+        # isatty() is True and stdin is still unreadable - a closed handle under
+        # a task runner, or Ctrl-C at the prompt. Declining is the answer; a
+        # traceback out of `init` is not.
+        sys.stdout.write("\n  no answer read; nothing written. Re-run with --yes.\n")
+        return False
+    return answer.strip().lower() in ("y", "yes")
 
 
 def init_check(a) -> int:

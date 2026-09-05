@@ -252,6 +252,11 @@ class Refused:
     def __post_init__(self) -> None:
         if not self.kind:
             self.kind = KIND_OF.get(self.reason, KIND.GEOMETRY)
+        # BAD_INPUT is not a verdict - the tool never ran - so it carries its own
+        # status and its own exit code from wherever it is constructed, rather
+        # than from whoever remembered to set it afterwards.
+        if self.reason == REASON.BAD_INPUT:
+            self.status = STATUS.BAD_INPUT
 
     def __bool__(self) -> bool:
         return False
@@ -271,7 +276,9 @@ class Refused:
 
     def block(self) -> str:
         name = self.source or "(segments)"
-        L = [RULE, "  planimeter  %-52s REFUSED" % name[:52], RULE]
+        # The banner is the status, not the class: a BAD_INPUT is not a verdict
+        # and must not read as one - the tool never ran on that file.
+        L = [RULE, "  planimeter  %-52s %s" % (name[:52], self.status), RULE]
         L.append("  reason   %s   (%s)" % (self.reason, self.kind))
         if self.detail:
             L.append("  detail   %s" % self.detail)
@@ -337,7 +344,9 @@ class Check:
 
 
 def verdict_from_json(d: Dict[str, Any]):
-    return Refused.from_json(d) if d.get("status") == STATUS.REFUSED else Chi.from_json(d)
+    # Keyed on `reason`, not on `status`: a BAD_INPUT carries status "BAD INPUT"
+    # and is still a Refused, and routing on the status string sent it to Chi.
+    return Refused.from_json(d) if "reason" in d else Chi.from_json(d)
 
 
 def _selfcheck() -> None:

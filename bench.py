@@ -589,10 +589,20 @@ def main(argv=None):
 
     print(RULE)
     print("  NOT RUN, and why")
+    # Read off the filesystem, not typed: a reason that goes stale the day a
+    # directory is filled is a number this file would be quoting rather than
+    # measuring.
+    here = os.path.dirname(os.path.abspath(__file__))
+    samples = os.path.join(here, "baselines", "agent_samples")
+    found = os.path.join(here, "corpus", "found")
+    why_samples = ("%s holds no scripts" % os.path.relpath(samples, here).replace("\\", "/")
+                   if os.path.isdir(samples) else "baselines/agent_samples/ does not exist")
+    why_found = ("corpus/found/ holds no SVGs (see corpus/found/README.md)"
+                 if os.path.isdir(found) else "corpus/found/ does not exist")
     for what, why in NOT_RUN + [
-            ("G1 agent samples", "baselines/agent_samples/ does not exist"),
-            ("G5 found-corpus refusal histogram", "corpus/found/ does not exist"),
-            ("G6 certified scale vs round-6 on real files", "corpus/found/ does not exist"),
+            ("G1 agent samples", why_samples),
+            ("G5 found-corpus refusal histogram", why_found),
+            ("G6 certified scale vs round-6 on real files", why_found),
             ("G4 vision comparison", "CUT: it read coordinate text, not a render")]:
         print("    %-46s %s" % (what, why))
     print(RULE)

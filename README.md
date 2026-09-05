@@ -98,8 +98,9 @@ planimeter walls.svg  vertex near edge
 ```
 
 **7 `cl100k_base` tokens of body**, 5 more for the path. A write to `notes.py` produces
-**zero bytes** — the suffix check runs before any import, costing **9.0 ms over an
-interpreter that does nothing**, and saving **84.2 ms** on every non-geometry write
+**zero bytes** — the suffix check runs before any import, costing **under 15 ms over an
+interpreter that does nothing** across seven runs, and saving **84 to 105 ms** on every
+non-geometry write
 ([RESULTS.md §6](https://github.com/teerthsharma/planimeter/blob/main/RESULTS.md#6-g7--hook-wall-clock-with-a-floor-control)).
 
 Four contract clauses, each with a test: **silence is the default** · **bounded work or a
@@ -225,7 +226,7 @@ here and not in a footnote. Not that the radius is *correct* — only that it is
 
 ## 📊 Benchmarks
 
-Pasted from `bench.py`'s own stdout at commit `1e4f006` — the last commit that changed
+Pasted from `bench.py`'s own stdout at commit `5713012` — the last commit that changed
 code — on one machine. No number in this repository is hand-typed. **[Every table, every
 control, and every arm that lost →
 RESULTS.md](https://github.com/teerthsharma/planimeter/blob/main/RESULTS.md)**
@@ -271,18 +272,20 @@ What that table is actually saying:
 added *after* the threshold was committed:
 
 ```
-    FLOOR bare interpreter, no hook at all        46.7 ms median  [42.6, 55.1]
-    silent path (.py write)                       55.7 ms median  [49.4, 67.9]  holds
-    CONTROL same hook, suffix check removed      139.9 ms median  [121.9, 153.0]
-    geometry path (.svg write)                   148.6 ms median  [130.9, 157.6]  holds
+    FLOOR bare interpreter, no hook at all        52.4 ms median  [48.0, 70.8]
+    silent path (.py write)                       56.4 ms median  [46.7, 62.9]  holds
+    CONTROL same hook, suffix check removed      154.0 ms median  [138.9, 163.4]
+    geometry path (.svg write)                   158.6 ms median  [145.0, 168.7]  holds
 ```
 
-`python -c pass` costs 46.7 ms on this machine, so the silent path is **9.0 ms of
-planimeter** and 46.7 ms of Windows. **The 60 ms gate sits 13 ms above that floor, inside
-the machine's own spread**: across five runs the silent path measured 52.5, 63.3, 54.8,
-60.5 and 55.7 ms, and two of the five blew the gate and were printed as `KILLS`. The
-threshold has not been moved and every run is reported, because a gate that is re-rolled
-until it passes is not a gate.
+`python -c pass` costs 52.4 ms on this machine, so the silent path is **4.0 ms of
+planimeter** and 52.4 ms of Windows — and that 4.0 ms is two noisy medians subtracted,
+which across seven runs came out 9.0, 2.0, 2.4, 4.7, 14.6, 4.0 and 4.0, so the honest form
+of the claim is **under about 15 ms**, not a number. **The 60 ms gate sits 8 ms above the
+floor, inside the machine's own spread**: across eleven runs the silent path measured 52.5,
+63.3, 54.8, 60.5, 55.7, 53.4, 56.9, 59.0, 70.3, 57.7 and 56.4 ms, and three of the eleven
+blew the gate and were printed as `KILLS`. The threshold has not been moved and every run
+is reported, because a gate that is re-rolled until it passes is not a gate.
 
 ### Reproduce all of it
 
@@ -334,14 +337,14 @@ what to re-observe, and a bench with controls.
 ## 💥 What we got wrong
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/teerthsharma/planimeter/main/assets/cost.svg" width="100%" alt="cost curve: fitted log-log exponent 1.82 against a gate that kills above 1.3">
+  <img src="https://raw.githubusercontent.com/teerthsharma/planimeter/main/assets/cost.svg" width="100%" alt="cost curve: fitted log-log exponent 1.825 against a gate that kills above 1.3">
 </p>
 
 - 🪦 **"Usable as a hook on a real floor plan" is withdrawn, not softened.** The gate was
   committed before any number existed: exponent above `1.3`, or above `50 ms` at 100,000
-  vertices, and the sentence dies. Measured exponent **`1.82`**, extrapolating to
-  **`698,776 ms`**. Both blown by orders of magnitude. The comfortable range is under roughly
-  **600 segments** — 41 ms at 544, 1.8 s at 3,784 — and above `BRUTE_MAX` it refuses
+  vertices, and the sentence dies. Measured exponent **`1.825`**, extrapolating to
+  **`740,531 ms`**. Both blown by orders of magnitude. The comfortable range is under roughly
+  **600 segments** — 43 ms at 544, 1.9 s at 3,784 — and above `BRUTE_MAX` it refuses
   `TOO_MANY_VERTICES` rather than stalling a turn. A k-d tree does not fix this: the
   certificate's precondition quantifies over *every* (vertex, edge) pair, and a
   nearest-neighbour structure answers a different question.
@@ -416,7 +419,7 @@ Collected once, here.
 
 - 🎯 **Sample the real baseline (G1).** Twenty unprompted first-attempt agent scripts against the closed-form corpus, whole distribution published, classified by which library each reached for. This is the gate that decides whether the accuracy headline lives.
 - 📂 **The found corpus (G5, G6).** ~30 real agent-written SVGs with truth established by a second method *before* planimeter runs on them. Refusal histogram by reason code ships first, before any usefulness claim.
-- ⚡ **A sweep line for the incidence pass.** The `1.82` exponent is the all-pairs (vertex, edge) quantifier. Fixing it is what puts real floor plans back in scope.
+- ⚡ **A sweep line for the incidence pass.** The `1.825` exponent is the all-pairs (vertex, edge) quantifier. Fixing it is what puts real floor plans back in scope.
 - 🗺️ **More readers** — GeoJSON, WKT, DXF — shipped when the found corpus contains that format, and not before.
 - 🔌 **MCP.** `gis-mcp` owns that surface with 92+ tools; the hook is the difference. Ask if you want one.
 

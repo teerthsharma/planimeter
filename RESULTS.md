@@ -8,7 +8,7 @@ did not clear and they are reported in the same voice as the ones that did.
 **Machine of record.**
 
 ```
-commit    1e4f006            the last commit that changed code, working tree clean
+commit    5713012            the last commit that changed code, working tree clean
 machine   WIN-16QAL06O9GB    Windows 11, python 3.11.9
 runtime   numpy 2.4.6   svgelements 1.9.6
 opponents shapely 2.1.2 / GEOS 3.13.1   scikit-image 0.26.0   networkx 3.6.1   tiktoken 0.14.0
@@ -23,11 +23,11 @@ documentation commit that follows moves `HEAD` without moving a number.
 python -m venv .venv
 .venv/Scripts/pip install -e ".[test]"
 .venv/Scripts/python -m pytest -q         # 474 passed
-.venv/Scripts/python bench.py             # the tables below, 57.7 s
+.venv/Scripts/python bench.py             # the tables below, 61.3 s
 ```
 
-The footer of that run reads `commit 1e4f006  machine WIN-16QAL06O9GB  python 3.11.9
-PYTHONHASHSEED=0  57.7 s`. Sections 1, 2 and 3 are bit-identical across every run on this
+The footer of that run reads `commit 5713012  machine WIN-16QAL06O9GB  python 3.11.9
+PYTHONHASHSEED=0  61.3 s`. Sections 1, 2 and 3 are bit-identical across every run on this
 machine; sections 5 and 6 are wall clock and carry their own spread.
 
 ---
@@ -211,22 +211,22 @@ algorithm, different input representation, and it needs a number planimeter does
 
 ```
          k     segs    verts   spectrum     window      total
-         4       40       25        0.1        0.2        0.6
-         8      144       81        0.3        0.6        2.9
-        12      312      169        1.5        1.2       12.4
-        16      544      289        7.7        3.6       41.5
-        20      840      441       17.3        7.3       95.5
-        24     1200      625       41.4       14.8      178.6
-        28     1624      841       66.5       22.0      334.2
-        32     2112     1089      129.4       43.6      548.2
-        36     2664     1369      206.3       65.5      939.0
-        40     3280     1681      299.8       85.4     1357.4
-        43     3784     1936      412.2      113.4     1774.8
+         4       40       25        0.1        0.2        0.7
+         8      144       81        0.4        0.6        2.9
+        12      312      169        2.2        1.4       14.6
+        16      544      289        7.9        3.7       43.3
+        20      840      441       19.8        7.8       97.2
+        24     1200      625       37.8       12.5      208.5
+        28     1624      841       74.4       29.5      375.5
+        32     2112     1089      126.3       39.7      631.7
+        36     2664     1369      201.9       65.2      994.1
+        40     3280     1681      289.5       97.7     1411.2
+        43     3784     1936      400.3      139.4     1880.1
 ```
 
 ```
-    fitted log-log exponent 1.82  (kills above 1.3)
-    extrapolated to n = 1e5: 698776 ms  (kills above 50 ms)
+    fitted log-log exponent 1.83  (kills above 1.3)
+    extrapolated to n = 1e5: 740531 ms  (kills above 50 ms)
 ```
 
 **G3 thresholds: exponent > 1.3, or > 50 ms at n = 1e5. Both blown, by orders of
@@ -234,17 +234,19 @@ magnitude. NOT EARNED.**
 
 > **"Usable as a hook on a real floor plan" is withdrawn, not softened.**
 
-The comfortable hook range is under roughly 600 segments: 41 ms at 544, 95 ms at 840,
-1.8 s at 3,784. A hard ceiling of `BRUTE_MAX = 2000` vertices refuses `TOO_MANY_VERTICES`
+The comfortable hook range is under roughly 600 segments: 43 ms at 544, 97 ms at 840,
+1.9 s at 3,784. A hard ceiling of `BRUTE_MAX = 2000` vertices refuses `TOO_MANY_VERTICES`
 above it rather than stalling a turn.
 
 The cost is the all-pairs vertex-to-edge pass the certificate quantifies over. That pass
 is not an implementation detail that a k-d tree removes: the certificate's precondition is
 a statement about *every* (vertex, non-incident edge) pair, and a nearest-neighbour
-structure answers a different question. Three independent measurements of the exponent
-exist — 1.82 over 11 points to k=43 in the run of record, 1.87 over the same 11 points on
-an earlier run, and 2.2 over a shorter range during the core build. All three are far
-above the gate; the gate result does not depend on which is right.
+structure answers a different question. The exponent has been measured five times on
+this machine — 1.825 over 11 points to k=43 in the run of record (`1.83` in the table
+above is `bench.py`'s two-decimal format for the same number), then 1.84 and 1.88 over
+the same 11 points on repeat runs, 1.87 on an earlier run, and 2.2 over a shorter range
+during the core build. All five are far above the gate; the gate result does not depend
+on which is right.
 
 ---
 
@@ -253,33 +255,41 @@ above the gate; the gate result does not depend on which is right.
 **Command.** `.venv/Scripts/python bench.py` (20 cold subprocesses per row, Windows)
 
 ```
-    FLOOR bare interpreter, no hook at all        46.7 ms median  [42.6, 55.1]
-    silent path (.py write)                       55.7 ms median  [49.4, 67.9]  holds
-    CONTROL same hook, suffix check removed      139.9 ms median  [121.9, 153.0]
-    geometry path (.svg write)                   148.6 ms median  [130.9, 157.6]  holds
+    FLOOR bare interpreter, no hook at all        52.4 ms median  [48.0, 70.8]
+    silent path (.py write)                       56.4 ms median  [46.7, 62.9]  holds
+    CONTROL same hook, suffix check removed      154.0 ms median  [138.9, 163.4]
+    geometry path (.svg write)                   158.6 ms median  [145.0, 168.7]  holds
 ```
 
 **G7 thresholds: 60 ms silent, 250 ms geometry. Both hold on the run of record, and the
 silent one does not hold on every run.**
 
 **The floor control is what makes these numbers readable, and it was added after the
-threshold was committed.** `python -c pass` costs 46.7 ms on this machine. The silent path
-costs **9.0 ms over an interpreter that does nothing** — that is the whole cost of
-`planimeter.hook`'s module-scope imports plus the suffix check. The 60 ms gate is therefore
-measuring Windows process startup with 13 ms of headroom, not planimeter, and on a machine
-whose Python starts slower it will fire for reasons that have nothing to do with this
-package.
+threshold was committed.** `python -c pass` costs 52.4 ms on this machine, and the silent
+path costs **4.0 ms more** — that is the whole cost of `planimeter.hook`'s module-scope
+imports plus the suffix check. The 60 ms gate is therefore measuring Windows process
+startup with 8 ms of headroom, not planimeter, and on a machine whose Python starts slower
+it will fire for reasons that have nothing to do with this package.
 
-**This is not hypothetical.** Across five runs of `bench.py` on this machine the silent
-path measured 52.5, 63.3, 54.8, 60.5 and 55.7 ms; two of the five exceeded the 60 ms gate
-and were printed as `KILLS`. The gate is reported as it stands — the threshold has not been
-moved, and no run was discarded for failing it — and the floor row is published beside it
-so a reader can see what the number is made of. **On this evidence the silent-path gate is
-not a property of the package: it is a coin flip on process startup, and the honest reading
-of the row is the 9.0 ms difference, not the pass or fail beside it.**
+**That difference is itself two noisy medians subtracted, and it is reported as a range,
+not as a number.** Across the seven runs that recorded the floor row it measured 9.0, 2.0,
+2.4, 4.7, 14.6, 4.0 and 4.0 ms — median 4.0, spread 2.0 to 14.6, on medians whose own
+ranges overlap almost completely. **Any single-run figure for this difference, including
+the 4.0 ms in the run of record, is not a property of the package**; what the seven runs
+support is *under about 15 ms*, and that is the claim.
 
-The suffix check is worth 84.2 ms on every non-geometry write (139.9 against 55.7), which
-is the difference between a hook that can be left installed and one that cannot.
+**Nor is the gate itself stable.** Across eleven runs of `bench.py` on this machine the
+silent path measured 52.5, 63.3, 54.8, 60.5, 55.7, 53.4, 56.9, 59.0, 70.3, 57.7 and
+56.4 ms; three of the eleven exceeded the 60 ms gate and were printed as `KILLS`. The gate
+is reported as it stands — the threshold has not been moved, and no run was discarded for
+failing it — and the floor row is published beside it so a reader can see what the number
+is made of. **On this evidence the silent-path gate is not a property of the package
+either: it is a coin flip on process startup.**
+
+The suffix check is worth 97.6 ms on every non-geometry write in the run of record (154.0
+against 56.4), and 84 to 105 ms across the seven runs. That is the difference between a
+hook that can be left installed and one that cannot, and unlike the 4.0 ms it is far larger
+than the spread it is measured against.
 
 **The stamp.**
 
@@ -433,7 +443,7 @@ to the accuracy row rather than in a footnote.
 | polygonize @ planimeter's own radius (oracle) | 22 wrong / 528 | truth by construction |
 | GEOS `delaunay_triangles` as an EMST supergraph | 1 of 793 point sets | exact all-pairs Prim |
 | planimeter at `rho = 100` | 3 wrong / 528 | truth by construction |
-| planimeter's cost curve (G3) | exponent 1.82 against a 1.3 gate | the gate, committed first |
+| planimeter's cost curve (G3) | exponent 1.825 against a 1.3 gate | the gate, committed first |
 | planimeter's refusal cliff | no level certifies everything | the shape the design predicted |
 | planimeter on two squares a tenth apart | one piece where a reader sees two | the picture |
 

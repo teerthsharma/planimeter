@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "planimeter"
+version = "0.1.0"
+description = "Three integers for a geometry file - pieces, enclosed faces, Euler characteristic - from the arrangement, with the snap radius that decided them, or a typed refusal."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Teerth Sharma" }]
+keywords = ["euler-characteristic", "geometry", "svg", "topology", "arrangement", "agent-tools"]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Mathematics",
+]
+# numpy for the exact spanning tree and the incidence passes; svgelements for
+# the SVG reader. No shapely, no GEOS: the one thing GEOS was wanted for -
+# an exact Euclidean MST via the Delaunay triangulation - was measured and
+# does not hold on near-degenerate point sets (see planimeter/snap.py:emst).
+dependencies = [
+  "numpy>=1.22",
+  "svgelements>=1.9",
+]
+
+[project.optional-dependencies]
+# shapely here is a benchmark opponent and the control behind the Delaunay
+# measurement, never a runtime dependency.
+test = ["pytest>=7.4", "scikit-image>=0.22", "networkx>=3", "shapely>=2.0"]
+
+[project.scripts]
+planimeter = "planimeter.cli:main"
+
+[tool.setuptools]
+packages = ["planimeter"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
